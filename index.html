@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>라이더 모니터링 (PC)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
+
+  /* Header */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: #00c4ae; color: #fff;
+    padding: 14px 24px 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header h1 { font-size: 20px; font-weight: 700; }
+  .header-meta { display: flex; align-items: center; gap: 10px; font-size: 13px; opacity: 0.9; margin-top: 2px; }
+  .countdown-badge {
+    background: rgba(255,255,255,0.25); border-radius: 20px;
+    padding: 3px 10px; font-weight: 600; font-size: 13px;
+  }
+  .refresh-btn {
+    background: rgba(255,255,255,0.25); border: none; border-radius: 20px;
+    color: #fff; font-size: 13px; font-weight: 600; padding: 5px 14px;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .refresh-btn:hover { background: rgba(255,255,255,0.4); }
+
+  /* Main container */
+  .container { max-width: 1400px; margin: 0 auto; padding: 0 20px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; padding: 16px 0 0; }
+  .tab-btn {
+    flex: 1; max-width: 160px; padding: 11px 0; font-size: 14px; font-weight: 600;
+    border: 1.5px solid #ddd; background: #fff; color: #888;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .tab-btn:first-child { border-radius: 10px 0 0 10px; }
+  .tab-btn:last-child  { border-radius: 0 10px 10px 0; border-left: none; }
+  .tab-btn:not(:first-child) { border-left: none; }
+  .tab-btn.active { background: #00c4ae; color: #fff; border-color: #00c4ae; }
+
+  /* Search */
+  .search-wrap { padding: 12px 0 0; }
+  .search-input {
+    width: 100%; max-width: 460px; padding: 11px 16px; border-radius: 10px;
+    border: 1.5px solid #ddd; font-size: 15px; outline: none;
+    background: #fff; transition: border-color 0.2s;
+  }
+  .search-input:focus { border-color: #00c4ae; }
+
+  /* Summary */
+  .summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; padding: 14px 0; }
+  .sum-card {
+    background: #fff; border-radius: 12px; padding: 14px 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .sum-label { font-size: 12px; color: #888; font-weight: 500; margin-bottom: 6px; }
+  .sum-value { font-size: 28px; font-weight: 700; }
+  .sum-value.danger { color: #e53e3e; }
+  .sum-value.warn   { color: #dd6b20; }
+  .sum-value.ok     { color: #00c4ae; }
+
+  /* Peak summary */
+  .peak-summary { padding-bottom: 6px; }
+  .peak-title { font-size: 13px; font-weight: 700; color: #555; margin-bottom: 10px; }
+  .peak-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .peak-card {
+    background: #fff; border-radius: 12px; padding: 14px 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08); text-align: center;
+  }
+  .peak-label { font-size: 11px; color: #888; margin-bottom: 6px; line-height: 1.3; }
+  .peak-val { font-size: 26px; font-weight: 800; color: #1a1a1a; }
+
+  /* Card grid */
+  .list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    padding: 14px 0 60px;
+  }
+
+  /* Rider card */
+  .rider-card {
+    background: #fff; border-radius: 14px; padding: 16px 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    cursor: pointer; transition: transform 0.1s, box-shadow 0.1s;
+    border-left: 4px solid transparent;
+  }
+  .rider-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+  .rider-card.danger  { border-left-color: #e53e3e; }
+  .rider-card.warn    { border-left-color: #dd6b20; }
+  .rider-card.ok      { border-left-color: #48bb78; }
+  .rider-card.running { border-left-color: #3b82f6; }
+
+  .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .rider-name { font-size: 16px; font-weight: 700; }
+  .status-badge {
+    font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+  }
+  .status-badge.active   { background: #e6f9f7; color: #00a896; }
+  .status-badge.inactive { background: #f2f2f2; color: #888; }
+
+  .card-stats { display: flex; gap: 16px; font-size: 13px; color: #555; }
+  .stat-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .stat-val { font-weight: 600; font-size: 15px; color: #1a1a1a; }
+
+  .reject-row { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+  .reject-label { font-size: 12px; color: #888; }
+  .reject-pct { font-size: 20px; font-weight: 800; }
+  .reject-pct.danger { color: #e53e3e; }
+  .reject-pct.warn   { color: #dd6b20; }
+  .reject-pct.ok     { color: #48bb78; }
+
+  /* Empty / Loading */
+  .empty {
+    grid-column: 1 / -1;
+    text-align: center; padding: 80px 20px; color: #aaa;
+    font-size: 16px;
+  }
+
+  /* Modal — centered on desktop */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.5);
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #fff; width: 100%; max-width: 480px; border-radius: 20px;
+    padding: 28px 28px 32px;
+    animation: scaleIn 0.2s ease;
+    max-height: 90vh; overflow-y: auto;
+  }
+  @keyframes scaleIn {
+    from { transform: scale(0.94); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+  }
+  .modal-close {
+    float: right; background: none; border: none; font-size: 22px;
+    cursor: pointer; color: #999; line-height: 1; margin-top: -4px;
+  }
+  .modal-close:hover { color: #444; }
+  .modal-name   { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .modal-status { font-size: 13px; color: #888; margin-bottom: 18px; }
+  .modal-grid   { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .modal-stat {
+    background: #f7f7f7; border-radius: 10px; padding: 14px;
+    text-align: center;
+  }
+  .modal-stat-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+  .modal-stat-val   { font-size: 22px; font-weight: 700; }
+  .modal-reject-row {
+    background: #fff5f5; border-radius: 10px; padding: 14px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .modal-reject-label { font-size: 13px; color: #888; font-weight: 500; }
+  .modal-reject-val   { font-size: 28px; font-weight: 800; }
+  .modal-reject-val.danger { color: #e53e3e; }
+  .modal-reject-val.warn   { color: #dd6b20; }
+  .modal-reject-val.ok     { color: #48bb78; }
+
+  .btn-row { display: flex; gap: 10px; }
+  .btn-copy {
+    flex: 1; padding: 15px; background: #f0f2f5; color: #1a1a1a;
+    border: none; border-radius: 12px; font-size: 15px; font-weight: 700;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .btn-copy:hover { background: #dde0e5; }
+  .btn-copy.copied { background: #48bb78; color: #fff; }
+  .btn-sms {
+    flex: 1; padding: 15px; background: #00c4ae; color: #fff;
+    border: none; border-radius: 12px; font-size: 15px; font-weight: 700;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .btn-sms:hover { background: #009e8e; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    background: #1a1a1a; color: #fff; padding: 12px 24px; border-radius: 24px;
+    font-size: 14px; z-index: 300; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>🛵 라이더 모니터링</h1>
+    <div class="header-meta">
+      <span id="last-update">마지막 업데이트: -</span>
+      <span class="countdown-badge" id="countdown">30s</span>
+    </div>
+  </div>
+  <button class="refresh-btn" onclick="manualRefresh()">↻ 새로고침</button>
+</div>
+
+<div class="container">
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-all"    onclick="setTab('all')">전체</button>
+    <button class="tab-btn"        id="tab-active" onclick="setTab('active')">운행중</button>
+    <button class="tab-btn"        id="tab-danger" onclick="setTab('danger')">⚠️ 위험</button>
+  </div>
+
+  <div class="search-wrap">
+    <input class="search-input" type="text" id="search" placeholder="라이더 이름 검색..." autocomplete="off">
+  </div>
+
+  <div class="summary">
+    <div class="sum-card"><div class="sum-label">전체 라이더</div><div class="sum-value ok"     id="s-total">-</div></div>
+    <div class="sum-card"><div class="sum-label">운행중</div>      <div class="sum-value ok"     id="s-active">-</div></div>
+    <div class="sum-card"><div class="sum-label">위험 (거절률 20%+)</div><div class="sum-value danger" id="s-danger">-</div></div>
+    <div class="sum-card"><div class="sum-label">전체 완료건수</div><div class="sum-value ok"    id="s-completed">-</div></div>
+    <div class="sum-card"><div class="sum-label">평균 거절률</div> <div class="sum-value"        id="s-avg">-</div></div>
+  </div>
+
+  <div class="peak-summary">
+    <div class="peak-title">시간대별 배달 합계 (전체 라이더)</div>
+    <div class="peak-grid">
+      <div class="peak-card">
+        <div class="peak-label">🌅 아침점심피크</div>
+        <div class="peak-val" id="p-morning">-</div>
+      </div>
+      <div class="peak-card">
+        <div class="peak-label">☀️ 오후논피크</div>
+        <div class="peak-val" id="p-afternoon">-</div>
+      </div>
+      <div class="peak-card">
+        <div class="peak-label">🌆 저녁피크</div>
+        <div class="peak-val" id="p-evening">-</div>
+      </div>
+      <div class="peak-card">
+        <div class="peak-label">🌙 심야논피크</div>
+        <div class="peak-val" id="p-midnight">-</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="list" id="list">
+    <div class="empty" id="empty-msg">데이터를 불러오는 중입니다…</div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-name"   id="m-name"></div>
+    <div class="modal-status" id="m-status"></div>
+    <div class="modal-grid">
+      <div class="modal-stat">
+        <div class="modal-stat-label">완료</div>
+        <div class="modal-stat-val" id="m-completed"></div>
+      </div>
+      <div class="modal-stat">
+        <div class="modal-stat-label">거절</div>
+        <div class="modal-stat-val" id="m-rejected"></div>
+      </div>
+      <div class="modal-stat">
+        <div class="modal-stat-label">배차취소</div>
+        <div class="modal-stat-val" id="m-dispatch"></div>
+      </div>
+      <div class="modal-stat">
+        <div class="modal-stat-label">라이더취소</div>
+        <div class="modal-stat-val" id="m-rider-cancel"></div>
+      </div>
+    </div>
+    <div style="background:#f7f7f7;border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:11px;color:#888;font-weight:600;margin-bottom:10px;">시간대별 배달</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:#888;margin-bottom:4px;">🌅 아침점심피크</div>
+          <div style="font-size:20px;font-weight:700;" id="m-morning">-</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:#888;margin-bottom:4px;">☀️ 오후논피크</div>
+          <div style="font-size:20px;font-weight:700;" id="m-afternoon">-</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:#888;margin-bottom:4px;">🌆 저녁피크</div>
+          <div style="font-size:20px;font-weight:700;" id="m-evening">-</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:#888;margin-bottom:4px;">🌙 심야논피크</div>
+          <div style="font-size:20px;font-weight:700;" id="m-midnight">-</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-reject-row">
+      <span class="modal-reject-label">거절률</span>
+      <span class="modal-reject-val" id="m-rate"></span>
+    </div>
+    <div class="btn-row">
+      <button class="btn-copy" id="btn-copy">📋 문자 복사</button>
+      <button class="btn-sms"  id="btn-sms">📱 문자 보내기</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  var API = '/api/riders';
+  var INTERVAL = 30;
+
+  var allRiders = [];
+  var riderDataTs = null;
+  var selectedRider = null;
+  var countdownVal = INTERVAL;
+  var countdownTimer = null;
+  var currentTab = 'all';
+  var knownDangerSet = null; // null = 첫 로드, Set = 이미 알림 보낸 라이더
+
+  // 알림 권한 요청
+  function requestNotifPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+
+  // 경고음 (Web Audio API — 파일 없이)
+  function playAlert() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.15, 0.3].forEach(function(delay) {
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'sine'; osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.4, ctx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.12);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.13);
+      });
+    } catch(e) {}
+  }
+
+  // 20% 초과 라이더 알림 체크
+  function checkAndNotify(riders) {
+    var dangerous = riders.filter(function(r) { return r.rejectRate >= 20; });
+    if (knownDangerSet === null) {
+      // 첫 로드: 현재 위험자는 알림 없이 기록만
+      knownDangerSet = new Set(dangerous.map(function(r) { return r.name; }));
+      return;
+    }
+    // 새로 20% 넘은 사람만 알림
+    var newDanger = dangerous.filter(function(r) { return !knownDangerSet.has(r.name); });
+    if (newDanger.length > 0) {
+      playAlert();
+      newDanger.forEach(function(r) {
+        knownDangerSet.add(r.name);
+        var msg = r.name + '님 거절률 ' + r.rejectRate + '%';
+        showToast('⚠️ ' + msg);
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('⚠️ 거절률 위험', { body: msg, icon: '' });
+        }
+      });
+    }
+    // 20% 아래로 내려간 사람은 Set에서 제거 (회복 시 다시 알림 받을 수 있게)
+    var safeNames = riders.filter(function(r) { return r.rejectRate < 20; }).map(function(r) { return r.name; });
+    safeNames.forEach(function(n) { knownDangerSet.delete(n); });
+  }
+
+  function setTab(tab) {
+    currentTab = tab;
+    document.getElementById('tab-all').className    = 'tab-btn' + (tab === 'all'    ? ' active' : '');
+    document.getElementById('tab-active').className = 'tab-btn' + (tab === 'active' ? ' active' : '');
+    document.getElementById('tab-danger').className = 'tab-btn' + (tab === 'danger' ? ' active' : '');
+    render();
+  }
+
+  function fetchRiders() {
+    fetch(API)
+      .then(function(res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function(json) {
+        allRiders = (json.data || []).slice().sort(function(a, b) {
+          return b.rejectRate - a.rejectRate;
+        });
+        riderDataTs = json.ts || null;
+        checkAndNotify(allRiders);
+        updateLastUpdate();
+        render();
+        resetCountdown();
+      })
+      .catch(function(e) {
+        showToast('데이터 로드 실패: ' + e.message);
+        resetCountdown();
+      });
+  }
+
+  function updateLastUpdate() {
+    var now = new Date();
+    var h = String(now.getHours()).padStart(2, '0');
+    var m = String(now.getMinutes()).padStart(2, '0');
+    var s = String(now.getSeconds()).padStart(2, '0');
+    document.getElementById('last-update').textContent = '마지막 업데이트: ' + h + ':' + m + ':' + s;
+  }
+
+  function resetCountdown() {
+    countdownVal = INTERVAL;
+    if (countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = setInterval(function() {
+      countdownVal--;
+      document.getElementById('countdown').textContent = countdownVal + 's';
+      if (countdownVal <= 0) {
+        clearInterval(countdownTimer);
+        fetchRiders();
+      }
+    }, 1000);
+    document.getElementById('countdown').textContent = countdownVal + 's';
+  }
+
+  function rateClass(rate) {
+    if (rate >= 20) return 'danger';
+    if (rate >= 10) return 'warn';
+    return 'ok';
+  }
+
+  function esc(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function render() {
+    var q = document.getElementById('search').value.trim().toLowerCase();
+    var base = currentTab === 'active'
+      ? allRiders.filter(function(r) { return r.status === '운행중'; })
+      : currentTab === 'danger'
+      ? allRiders.filter(function(r) { return r.rejectRate >= 20; })
+      : allRiders;
+    var riders = q
+      ? base.filter(function(r) { return r.name && r.name.toLowerCase().indexOf(q) !== -1; })
+      : base;
+
+    var total  = allRiders.length;
+    var active = allRiders.filter(function(r) { return r.status === '운행중'; }).length;
+    var danger = allRiders.filter(function(r) { return r.rejectRate >= 20; }).length;
+
+    var totalCompleted = allRiders.reduce(function(s, r) { return s + (r.completed || 0); }, 0);
+    var totalRejected  = allRiders.reduce(function(s, r) { return s + (r.rejected  || 0); }, 0);
+    var totalForRate   = totalCompleted + totalRejected;
+    // ✅ 올바른 계산: 전체 거절건수 ÷ (전체 완료 + 전체 거절)
+    var avgNum = totalForRate > 0 ? (totalRejected / totalForRate * 100) : null;
+
+    document.getElementById('s-total').textContent     = total;
+    document.getElementById('s-active').textContent    = active;
+    document.getElementById('s-danger').textContent    = danger;
+    document.getElementById('s-completed').textContent = totalCompleted;
+
+    // 피크타임 합계
+    var sumM = 0, sumA = 0, sumE = 0, sumN = 0;
+    allRiders.forEach(function(r) {
+      sumM += r.morning   || 0;
+      sumA += r.afternoon || 0;
+      sumE += r.evening   || 0;
+      sumN += r.midnight  || 0;
+    });
+    document.getElementById('p-morning').textContent   = sumM;
+    document.getElementById('p-afternoon').textContent = sumA;
+    document.getElementById('p-evening').textContent   = sumE;
+    document.getElementById('p-midnight').textContent  = sumN;
+
+    var avgEl = document.getElementById('s-avg');
+    if (avgNum !== null) {
+      avgEl.textContent = avgNum.toFixed(1) + '%';
+      avgEl.className   = 'sum-value ' + rateClass(avgNum);
+    } else {
+      avgEl.textContent = '-';
+      avgEl.className   = 'sum-value';
+    }
+
+    var list     = document.getElementById('list');
+    var emptyMsg = document.getElementById('empty-msg');
+
+    Array.from(list.querySelectorAll('.rider-card')).forEach(function(el) { el.remove(); });
+
+    if (riders.length === 0) {
+      emptyMsg.style.display = 'block';
+      emptyMsg.textContent   = q ? '검색 결과가 없습니다.' : '라이더 데이터가 없습니다.';
+      return;
+    }
+    emptyMsg.style.display = 'none';
+
+    riders.forEach(function(r) {
+      var cls      = rateClass(r.rejectRate);
+      var isActive = r.status === '운행중';
+      var card     = document.createElement('div');
+      card.className = 'rider-card ' + (isActive ? 'running' : cls);
+      card.innerHTML =
+        '<div class="card-top">' +
+          '<span class="rider-name">' + esc(r.name) + '</span>' +
+          '<span class="status-badge ' + (isActive ? 'active' : 'inactive') + '">' +
+            esc(r.status || '미확인') +
+          '</span>' +
+        '</div>' +
+        '<div class="card-stats">' +
+          '<div class="stat-item"><span class="stat-val">' + r.completed     + '</span><span>완료</span></div>' +
+          '<div class="stat-item"><span class="stat-val">' + r.rejected      + '</span><span>거절</span></div>' +
+          '<div class="stat-item"><span class="stat-val">' + r.dispatchCancel + '</span><span>배차취소</span></div>' +
+        '</div>' +
+        '<div class="reject-row">' +
+          '<span class="reject-label">거절률</span>' +
+          '<span class="reject-pct ' + cls + '">' + r.rejectRate + '%</span>' +
+        '</div>';
+      card.addEventListener('click', function() { openModal(r); });
+      list.appendChild(card);
+    });
+  }
+
+  function openModal(r) {
+    selectedRider = r;
+    var cls = rateClass(r.rejectRate);
+    document.getElementById('m-name').textContent         = r.name;
+    document.getElementById('m-status').textContent       = r.status || '미확인';
+    document.getElementById('m-completed').textContent    = r.completed;
+    document.getElementById('m-rejected').textContent     = r.rejected;
+    document.getElementById('m-dispatch').textContent     = r.dispatchCancel;
+    document.getElementById('m-rider-cancel').textContent = r.riderCancel !== undefined ? r.riderCancel : 0;
+    document.getElementById('m-morning').textContent   = r.morning   !== undefined ? r.morning   : '-';
+    document.getElementById('m-afternoon').textContent = r.afternoon !== undefined ? r.afternoon : '-';
+    document.getElementById('m-evening').textContent   = r.evening   !== undefined ? r.evening   : '-';
+    document.getElementById('m-midnight').textContent  = r.midnight  !== undefined ? r.midnight  : '-';
+    var rateEl = document.getElementById('m-rate');
+    rateEl.textContent = r.rejectRate + '%';
+    rateEl.className   = 'modal-reject-val ' + cls;
+    var btn = document.getElementById('btn-copy');
+    btn.textContent = '📋 문자 복사';
+    btn.className   = 'btn-copy';
+    document.getElementById('modal-overlay').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+    selectedRider = null;
+  }
+
+  document.getElementById('modal-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  document.getElementById('btn-copy').addEventListener('click', function() {
+    if (!selectedRider) return;
+    var r    = selectedRider;
+    var text =
+      r.name + '님\n' +
+      '완료 ' + r.completed + '건 / 거절 ' + r.rejected + '건 / 배차취소 ' + r.dispatchCancel + '건\n' +
+      '거절률 ' + r.rejectRate + '%\n' +
+      '거절률 관리 부탁드립니다.';
+    navigator.clipboard.writeText(text).then(function() {
+      var btn = document.getElementById('btn-copy');
+      btn.textContent = '✅ 복사됨!';
+      btn.className   = 'btn-copy copied';
+      showToast('문자가 클립보드에 복사되었습니다.');
+    }).catch(function(e) {
+      showToast('복사 실패: ' + e.message);
+    });
+  });
+
+  document.getElementById('btn-sms').addEventListener('click', function() {
+    if (!selectedRider) return;
+    var r   = selectedRider;
+    var msg =
+      r.name + '님\n' +
+      '완료 ' + r.completed + '건 / 거절 ' + r.rejected + '건 / 배차취소 ' + r.dispatchCancel + '건\n' +
+      '거절률 ' + r.rejectRate + '%\n' +
+      '거절률 관리 부탁드립니다.';
+    var phone = (r.phone || '').replace(/[^0-9]/g, '');
+    if (!phone) {
+      showToast('전화번호가 없습니다.');
+      return;
+    }
+    navigator.clipboard.writeText(msg).catch(function(){});
+    window.location.href = 'sms:' + phone;
+    showToast('문자앱 열림 — 붙여넣기하세요');
+  });
+
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function() { t.classList.remove('show'); }, 2500);
+  }
+
+  var _pollTimer = null;
+
+  function manualRefresh() {
+    var prevTs = allRiders.length ? (riderDataTs || null) : null;
+
+    // 1. 서버에 즉시수집 신호
+    fetch('/api/request-refresh', { method: 'POST' }).catch(function(){});
+
+    // 2. 현재 캐시 즉시 표시
+    fetchRiders();
+    showToast('배민에서 최신 데이터 가져오는 중…');
+
+    // 3. 새 데이터 올 때까지 3초마다 폴링 (최대 90초)
+    if (_pollTimer) clearInterval(_pollTimer);
+    var attempts = 0;
+    _pollTimer = setInterval(function() {
+      attempts++;
+      fetch(API)
+        .then(function(r) { return r.json(); })
+        .then(function(json) {
+          if (json.ts && json.ts !== riderDataTs) {
+            clearInterval(_pollTimer);
+            allRiders = (json.data || []).slice().sort(function(a, b) { return b.rejectRate - a.rejectRate; });
+            riderDataTs = json.ts;
+            checkAndNotify(allRiders);
+            updateLastUpdate();
+            render();
+            resetCountdown();
+            showToast('✅ 최신 데이터로 업데이트됐습니다!');
+          }
+        }).catch(function(){});
+      if (attempts >= 30) clearInterval(_pollTimer); // 90초 후 포기
+    }, 3000);
+  }
+
+  document.getElementById('search').addEventListener('input', render);
+
+  requestNotifPermission();
+  fetchRiders();
+</script>
+</body>
+</html>
