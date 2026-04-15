@@ -3,6 +3,7 @@
 
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3737;
@@ -73,7 +74,14 @@ const noCache = (res) => {
 };
 app.get('/coupang',        (req, res) => { noCache(res); res.sendFile(path.join(__dirname, 'coupang.html')); });
 app.get('/coupang-mobile', (req, res) => { noCache(res); res.sendFile(path.join(__dirname, 'coupang-mobile.html')); });
-app.get('/mobile', (req, res) => res.sendFile(path.join(__dirname, 'baemin-mobile.html')));
+app.get('/mobile', (req, res) => {
+  let html = fs.readFileSync(path.join(__dirname, 'baemin-mobile.html'), 'utf8');
+  // 운행중 라이더 이름 파란색 강제 적용
+  const css = '.rider-card.running .rider-name { color: #3b82f6 !important; }';
+  html = html.replace('</style>', css + '\n  </style>');
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(html);
+});
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 app.listen(PORT, () => console.log(`Cloud server on port ${PORT}`));
