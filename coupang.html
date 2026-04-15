@@ -207,6 +207,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Got
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; z-index: 300; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
 .toast.show { opacity: 1; }
 
+
 /* ── 데스크톱 오버라이드 768px+ ── */
 @media (min-width: 768px) {
   .header { padding: 12px 24px 10px; }
@@ -236,6 +237,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Got
       <div class="cap-pill" id="capPill">-/-명</div>
       <div class="wait-pill" id="waitPill">⏳0대기</div>
       <button class="refresh-btn" onclick="loadData()">↻ 새로고침 <span id="spinner" style="display:none" class="spinner"></span></button>
+      <button class="refresh-btn" id="btnCopyUrl" onclick="copyUrl()" style="background:rgba(255,255,255,0.2)">🔗 링크복사</button>
     </div>
   </div>
   <div class="header-row2">
@@ -332,6 +334,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Got
 </div>
 <div class="toast" id="toast"></div>
 
+
 <script>
 let riderState = null, peakState = null;
 let sortKey = 'rejectRate', filterMode = 'all';
@@ -426,15 +429,10 @@ function groupTimeSlots(slots) {
   const tagged = valid.map(s => { if (s.isPeak && !prevPeak) pgIdx++; prevPeak = s.isPeak; return { ...s, _pg: s.isPeak ? pgIdx : 0 }; });
   const fp1 = tagged.findIndex(s => s._pg === 1), fp2 = tagged.findIndex(s => s._pg === 2);
 
-  // 점심논피크 마감 = 저녁피크 시작 2시간 전 (15:00 등 동적 계산)
-  const dinnerStartHour = fp2 >= 0 ? slotHour(tagged[fp2].time) : 24;
-  const nonPeakEndHour  = dinnerStartHour - 2;
-
   const groups = [
     { key:'morning',    label:'아침',      emoji:'🌅', color:'#6b7280', slots:[] },
     { key:'lunchPeak',  label:'점심피크',  emoji:'⚡', color:'#ea580c', slots:[] },
     { key:'nonPeak',    label:'점심논피크', emoji:'🕑', color:'#3b82f6', slots:[] },
-    { key:'gap',        label:'공백',      emoji:'⏸',  color:'#d1d5db', slots:[], hidden:true },
     { key:'dinnerPeak', label:'저녁피크',  emoji:'🌆', color:'#C84B31', slots:[] },
     { key:'night',      label:'저녁논피크', emoji:'🌙', color:'#7c3aed', slots:[] },
   ];
@@ -443,10 +441,7 @@ function groupTimeSlots(slots) {
     if      (s._pg === 1) G.lunchPeak.push(s);
     else if (s._pg === 2) G.dinnerPeak.push(s);
     else if (fp1 === -1 || i < fp1) G.morning.push(s);
-    else if (fp2 === -1 || i < fp2) {
-      // 저녁피크 2시간 전부터는 공백 구간 (어느 피크에도 속하지 않음)
-      slotHour(s.time) < nonPeakEndHour ? G.nonPeak.push(s) : G.gap.push(s);
-    }
+    else if (fp2 === -1 || i < fp2) G.nonPeak.push(s); // lunchPeak~dinnerPeak 사이 = 점심논피크
     else G.night.push(s);
   });
   return groups;
@@ -462,8 +457,7 @@ function renderTimeSlots() {
   const groups = groupTimeSlots(slots);
   const gTotals = {};
   groups.forEach(g => { gTotals[g.key] = g.slots.reduce((s, c) => s + (c.accepted||0), 0); });
-  // gap(공백구간)은 합계에서 제외 — 쿠팡 시스템상 어느 피크에도 속하지 않는 슬롯
-  const total = groups.filter(g => !g.hidden).reduce((a,g) => a + gTotals[g.key], 0);
+  const total = groups.reduce((a,g) => a + gTotals[g.key], 0);
 
   document.getElementById('statMorning').innerHTML    = `${fmt(gTotals.morning   ||0)}<span class="sum-unit">건</span>`;
   document.getElementById('statLunchPeak').innerHTML  = `${fmt(gTotals.lunchPeak ||0)}<span class="sum-unit">건</span>`;
@@ -632,7 +626,17 @@ document.getElementById('btnSms').addEventListener('click', () => {
   showToast('문자앱 열림 — 붙여넣기 하세요');
 });
 
+function copyUrl() {
+  navigator.clipboard.writeText(window.location.href).then(() => {
+    const btn = document.getElementById('btnCopyUrl');
+    btn.textContent = '✅ 복사됨!';
+    setTimeout(() => { btn.textContent = '🔗 링크복사'; }, 2000);
+    showToast('링크 복사됐습니다.');
+  }).catch(() => showToast('복사 실패'));
+}
+
 function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2500); }
+
 
 document.getElementById('searchInput').addEventListener('input', renderRiders);
 loadData().then(resetCountdown);
