@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>쿠팡이츠 모니터링</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
+
+  /* ── Header ── */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: #C84B31; color: #fff;
+    padding: 10px 16px 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  }
+  .header-row1 { display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 17px; font-weight: 700; }
+  .header-pills { display: flex; align-items: center; gap: 6px; }
+  .cap-pill {
+    background: rgba(255,255,255,0.2); border-radius: 20px;
+    padding: 4px 10px; font-size: 13px; font-weight: 800;
+  }
+  .cap-pill.full { background: #fff; color: #C84B31; animation: pulse 1s infinite; }
+  .cap-pill.warn { background: rgba(255,200,0,0.35); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.7} }
+  .wait-pill {
+    background: rgba(255,255,255,0.15); border-radius: 20px;
+    padding: 4px 8px; font-size: 12px; font-weight: 600;
+  }
+  .header-row2 { display: flex; align-items: center; gap: 8px; margin-top: 5px; font-size: 11px; opacity: 0.85; }
+  .countdown-badge { background: rgba(255,255,255,0.25); border-radius: 20px; padding: 2px 8px; font-weight: 700; }
+  .refresh-btn {
+    background: rgba(255,255,255,0.25); border: none; border-radius: 20px;
+    color: #fff; font-size: 11px; font-weight: 600; padding: 2px 10px;
+    cursor: pointer;
+  }
+  .refresh-btn:active { background: rgba(255,255,255,0.4); }
+
+  /* ── 인원 꽉 참 배너 ── */
+  .cap-alert {
+    display: none; background: #991b1b; color: #fff;
+    padding: 10px 16px; font-size: 14px; font-weight: 700;
+    text-align: center; animation: flash 0.8s infinite;
+  }
+  .cap-alert.show { display: block; }
+  @keyframes flash { 0%,100%{background:#991b1b} 50%{background:#C84B31} }
+
+  /* ── 탭 ── */
+  .tabs { display: flex; background: #fff; border-bottom: 2px solid #f0f2f5; }
+  .tab-btn {
+    flex: 1; padding: 11px 0; font-size: 14px; font-weight: 600;
+    border: none; background: none; color: #aaa; cursor: pointer;
+    border-bottom: 3px solid transparent; margin-bottom: -2px;
+  }
+  .tab-btn.active { color: #C84B31; border-bottom-color: #C84B31; }
+
+  /* ── 요약 카드 ── */
+  .summary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 14px 0; }
+  .sum-card {
+    background: #fff; border-radius: 12px; padding: 11px 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  }
+  .sum-card.full-width { grid-column: 1/-1; }
+  .sum-label { font-size: 11px; color: #888; font-weight: 500; margin-bottom: 3px; }
+  .sum-value { font-size: 26px; font-weight: 800; }
+  .sum-value.danger { color: #C84B31; }
+  .sum-value.warn   { color: #f97316; }
+  .sum-value.ok     { color: #22c55e; }
+  .sum-value.blue   { color: #3b82f6; }
+  .sum-unit { font-size: 13px; font-weight: 500; color: #aaa; margin-left: 2px; }
+
+  /* ── 검색 & 필터 ── */
+  .filter-wrap { padding: 10px 14px 0; display: flex; align-items: center; gap: 8px; }
+  .search-input {
+    flex: 1; padding: 9px 12px; border-radius: 10px;
+    border: 1.5px solid #e5e7eb; font-size: 14px; outline: none;
+    background: #fff;
+  }
+  .search-input:focus { border-color: #C84B31; }
+  .filter-tab-wrap { display: flex; gap: 0; padding: 8px 14px 0; }
+  .filter-tab {
+    flex: 1; padding: 8px 0; font-size: 13px; font-weight: 600;
+    border: 1.5px solid #e5e7eb; background: #fff; color: #888;
+    cursor: pointer;
+  }
+  .filter-tab:first-child { border-radius: 8px 0 0 8px; }
+  .filter-tab:last-child  { border-radius: 0 8px 8px 0; }
+  .filter-tab:not(:first-child) { border-left: none; }
+  .filter-tab.active { background: #C84B31; color: #fff; border-color: #C84B31; }
+  .rider-count { font-size: 12px; color: #999; padding: 4px 14px 0; }
+
+  /* ── 라이더 리스트 ── */
+  .list { padding: 8px 14px 100px; display: flex; flex-direction: column; gap: 8px; }
+
+  /* ── 라이더 카드 ── */
+  .rider-card {
+    background: #fff; border-radius: 14px; padding: 14px 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+    border-left: 4px solid #e5e7eb;
+    cursor: pointer; -webkit-user-select: none; user-select: none;
+    transition: transform 0.1s;
+  }
+  .rider-card:active { transform: scale(0.98); }
+  .rider-card.danger  { border-left-color: #C84B31; }
+  .rider-card.warn    { border-left-color: #f97316; }
+  .rider-card.ok      { border-left-color: #22c55e; }
+  .rider-card.offline { border-left-color: #d1d5db; opacity: 0.75; }
+
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
+  .card-name { font-size: 16px; font-weight: 700; }
+  .card-sub  { font-size: 11px; color: #aaa; margin-top: 2px; }
+
+  .status-badge {
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 12px; white-space: nowrap;
+  }
+  .status-배달중  { background: #dbeafe; color: #1d4ed8; }
+  .status-대기중  { background: #dcfce7; color: #15803d; }
+  .status-오프라인 { background: #f3f4f6; color: #6b7280; }
+
+  /* 거절률 — 핵심! */
+  .reject-rate-row { display: flex; align-items: baseline; gap: 4px; margin-bottom: 4px; }
+  .reject-rate-num { font-size: 38px; font-weight: 900; line-height: 1; }
+  .reject-rate-num.danger { color: #C84B31; }
+  .reject-rate-num.warn   { color: #f97316; }
+  .reject-rate-num.ok     { color: #22c55e; }
+  .reject-rate-unit { font-size: 15px; color: #888; }
+  .reject-rate-label { font-size: 12px; color: #bbb; margin-left: 4px; }
+
+  .rate-bar-bg { height: 5px; background: #f0f2f5; border-radius: 3px; margin-bottom: 10px; }
+  .rate-bar    { height: 5px; border-radius: 3px; min-width: 3px; }
+  .rate-bar.danger { background: #C84B31; }
+  .rate-bar.warn   { background: #f97316; }
+  .rate-bar.ok     { background: #22c55e; }
+
+  /* 완료/거절/취소 */
+  .metrics { display: flex; gap: 0; border-top: 1px solid #f5f5f5; padding-top: 10px; }
+  .metric { flex: 1; text-align: center; }
+  .metric-val { font-size: 17px; font-weight: 700; }
+  .metric-val.red { color: #C84B31; }
+  .metric-val.orange { color: #f97316; }
+  .metric-label { font-size: 10px; color: #bbb; margin-top: 2px; }
+
+  /* 피크 실적 */
+  .peak-row {
+    display: flex; gap: 0;
+    margin-top: 8px; padding-top: 8px; border-top: 1px solid #f5f5f5;
+  }
+  .peak-item { flex: 1; text-align: center; }
+  .peak-item-val { font-size: 14px; font-weight: 700; }
+  .peak-item-label { font-size: 10px; color: #bbb; margin-top: 1px; }
+
+  /* ── 시간대별 탭 ── */
+  .time-tab-content { padding: 10px 14px 100px; }
+
+  /* 피크타임별 현황 가로 스크롤 */
+  .peak-section-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px; }
+  .peak-section-scroll::-webkit-scrollbar { display: none; }
+  .ps-card {
+    flex: 0 0 130px; background: #fff; border-radius: 12px; padding: 10px 10px 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+    border-top: 3px solid #ccc;
+  }
+  .ps-name { font-size: 10px; font-weight: 700; margin-bottom: 4px; }
+  .ps-rate { font-size: 26px; font-weight: 900; line-height: 1; margin-bottom: 4px; }
+  .ps-bar-bg { height: 3px; background: #f0f0f0; border-radius: 2px; margin-bottom: 4px; }
+  .ps-bar    { height: 3px; border-radius: 2px; }
+  .ps-detail { font-size: 10px; color: #999; display: flex; justify-content: space-between; }
+  .ps-surplus { font-size: 10px; text-align: right; margin-top: 2px; font-weight: 600; }
+
+  /* 시간대 합계 카드 */
+  .time-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .time-stat-card {
+    background: #fff; border-radius: 12px; padding: 10px 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+    border-left: 3px solid #ccc;
+  }
+  .ts-label { font-size: 11px; color: #888; margin-bottom: 2px; }
+  .ts-val   { font-size: 22px; font-weight: 800; }
+
+  /* 현재 시간대 / 전체 합계 */
+  .cur-total-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .cur-total-row .sum-card { flex: 1; }
+
+  /* 시간대 바 차트 */
+  .slot-section-title {
+    font-size: 12px; font-weight: 700; color: #555; margin: 12px 0 6px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .slot-scroll { overflow-x: auto; padding-bottom: 8px; }
+  .slot-scroll::-webkit-scrollbar { display: none; }
+  .slot-group { margin-bottom: 16px; }
+  .slot-group-header {
+    display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px;
+    padding-bottom: 6px; border-bottom: 2px solid #f0f0f0;
+  }
+  .slot-group-name  { font-size: 13px; font-weight: 800; }
+  .slot-group-total { font-size: 18px; font-weight: 800; }
+  .slot-group-unit  { font-size: 11px; color: #999; }
+
+  .slots-row { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 4px; }
+  .slots-row::-webkit-scrollbar { display: none; }
+
+  .ts-col {
+    flex: 0 0 52px; display: flex; flex-direction: column; align-items: center;
+    border-radius: 8px; overflow: hidden; border: 2px solid transparent;
+  }
+  .ts-col.peak    { background: #fff7ed; border-color: #fb923c; }
+  .ts-col.current { background: #fef2f2; border-color: #C84B31; box-shadow: 0 2px 6px rgba(200,75,49,0.2); }
+  .ts-col.empty   { opacity: 0.4; }
+
+  .ts-time {
+    width: 100%; text-align: center; font-size: 10px; font-weight: 700; color: #555;
+    padding: 4px 2px 2px; background: rgba(0,0,0,0.04); white-space: nowrap;
+  }
+  .ts-col.peak .ts-time    { color: #ea580c; }
+  .ts-col.current .ts-time { color: #C84B31; background: #fecaca; }
+
+  .ts-bar-wrap { width: 100%; padding: 4px 6px 4px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .ts-bar-bg { width: 24px; height: 60px; background: #f0f2f5; border-radius: 4px; display: flex; align-items: flex-end; overflow: hidden; }
+  .ts-bar { width: 100%; background: #d1d5db; border-radius: 4px; min-height: 3px; }
+  .ts-col.peak .ts-bar    { background: #fb923c; }
+  .ts-col.current .ts-bar { background: #C84B31; }
+
+  .ts-accepted { font-size: 12px; font-weight: 800; color: #1a1a1a; }
+  .ts-col.peak .ts-accepted    { color: #ea580c; }
+  .ts-col.current .ts-accepted { color: #C84B31; }
+
+  .ts-workers { font-size: 10px; color: #aaa; }
+  .ts-now-label { font-size: 9px; font-weight: 700; color: #C84B31; background: #fecaca; border-radius: 6px; padding: 1px 4px; }
+
+  /* ── 빈 화면 ── */
+  .empty { text-align: center; padding: 50px 20px; color: #bbb; font-size: 14px; line-height: 1.8; }
+  .empty-icon { font-size: 36px; margin-bottom: 10px; }
+
+  /* ── 모달 (하단 시트) ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.5); align-items: flex-end;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #fff; width: 100%; border-radius: 20px 20px 0 0;
+    padding: 20px 20px 40px; animation: slideUp 0.22s ease;
+    max-height: 90vh; overflow-y: auto;
+  }
+  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  .modal-handle { width: 40px; height: 4px; background: #ddd; border-radius: 2px; margin: 0 auto 16px; }
+  .modal-name   { font-size: 20px; font-weight: 800; margin-bottom: 2px; }
+  .modal-status { font-size: 13px; color: #888; margin-bottom: 14px; }
+
+  /* 거절률 모달 */
+  .modal-reject-box {
+    border-radius: 12px; padding: 14px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .modal-reject-box.danger { background: #fff1f0; }
+  .modal-reject-box.warn   { background: #fff8f0; }
+  .modal-reject-box.ok     { background: #f0fdf4; }
+  .modal-reject-label { font-size: 13px; color: #888; font-weight: 500; }
+  .modal-reject-val { font-size: 40px; font-weight: 900; line-height: 1; }
+  .modal-reject-val.danger { color: #C84B31; }
+  .modal-reject-val.warn   { color: #f97316; }
+  .modal-reject-val.ok     { color: #22c55e; }
+
+  .modal-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .modal-stat { background: #f7f7f7; border-radius: 10px; padding: 10px; text-align: center; }
+  .modal-stat-label { font-size: 10px; color: #888; margin-bottom: 4px; }
+  .modal-stat-val   { font-size: 20px; font-weight: 800; }
+  .modal-stat-val.red    { color: #C84B31; }
+  .modal-stat-val.orange { color: #f97316; }
+
+  .modal-peak-box { background: #f7f7f7; border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+  .modal-peak-title { font-size: 10px; color: #888; font-weight: 600; margin-bottom: 8px; }
+  .modal-peak-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .modal-peak-item { text-align: center; }
+  .modal-peak-val   { font-size: 18px; font-weight: 700; }
+  .modal-peak-label { font-size: 10px; color: #bbb; margin-top: 1px; }
+
+  .btn-row { display: flex; gap: 8px; }
+  .btn-copy {
+    flex: 1; padding: 14px; background: #f0f2f5; color: #1a1a1a;
+    border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer;
+  }
+  .btn-copy:active { background: #dde0e5; }
+  .btn-copy.copied { background: #22c55e; color: #fff; }
+  .btn-sms {
+    flex: 1; padding: 14px; background: #C84B31; color: #fff;
+    border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer;
+  }
+  .btn-sms:active { background: #a33827; }
+
+  /* ── 토스트 ── */
+  .toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 20px;
+    font-size: 13px; z-index: 300; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  /* 섹션 타이틀 */
+  .sec-title {
+    font-size: 12px; font-weight: 700; color: #555; margin: 12px 0 6px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .sec-dot { width: 6px; height: 6px; border-radius: 50%; background: #C84B31; display: inline-block; }
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<div class="header">
+  <div class="header-row1">
+    <h1>🛵 쿠팡이츠 모니터링</h1>
+    <div class="header-pills">
+      <div class="cap-pill" id="capPill">-/-명</div>
+      <div class="wait-pill" id="waitPill">⏳0대기</div>
+    </div>
+  </div>
+  <div class="header-row2">
+    <span id="lastUpdate">업데이트 중...</span>
+    <span class="countdown-badge" id="countdown">30s</span>
+    <button class="refresh-btn" onclick="loadData()">↻ 새로고침</button>
+  </div>
+</div>
+
+<!-- 인원 꽉 참 배너 -->
+<div class="cap-alert" id="capAlert">🔴 인원 꽉 참! 슬롯 <span id="capAlertText"></span></div>
+
+<!-- 탭 -->
+<div class="tabs">
+  <button class="tab-btn active" id="tabRidersBtn" onclick="showTab('riders')">라이더 현황</button>
+  <button class="tab-btn" id="tabTimeBtn" onclick="showTab('time')">시간대별 주문</button>
+</div>
+
+<!-- ── 라이더 탭 ── -->
+<div id="tabRiders">
+  <div class="summary">
+    <div class="sum-card"><div class="sum-label">온라인</div><div class="sum-value blue" id="sumOnline">-<span class="sum-unit">명</span></div></div>
+    <div class="sum-card"><div class="sum-label">완료</div><div class="sum-value ok" id="sumCompleted">-<span class="sum-unit">건</span></div></div>
+    <div class="sum-card"><div class="sum-label">거절/무시</div><div class="sum-value" id="sumRejected">-<span class="sum-unit">건</span></div></div>
+    <div class="sum-card"><div class="sum-label">취소</div><div class="sum-value" id="sumCancelled">-<span class="sum-unit">건</span></div></div>
+    <div class="sum-card"><div class="sum-label">전체 거절률</div><div class="sum-value" id="sumRejectRate">-<span class="sum-unit">%</span></div></div>
+    <div class="sum-card"><div class="sum-label">오늘 달성률</div><div class="sum-value" id="sumDailyRate">-<span class="sum-unit">%</span></div></div>
+    <div class="sum-card"><div class="sum-label">수락전 취소</div><div class="sum-value" id="sumPreCancel">-<span class="sum-unit">건</span></div></div>
+    <div class="sum-card"><div class="sum-label">수락후 취소</div><div class="sum-value" id="sumPostCancel">-<span class="sum-unit">건</span></div></div>
+  </div>
+
+  <div class="filter-wrap">
+    <input class="search-input" type="text" id="searchInput" placeholder="🔍 이름 검색..." oninput="renderRiders()">
+  </div>
+  <div class="filter-tab-wrap">
+    <button class="filter-tab active" id="fAll"     onclick="setFilter('all')">전체</button>
+    <button class="filter-tab" id="fOnline"  onclick="setFilter('online')">🟢 운행중</button>
+    <button class="filter-tab" id="fDanger"  onclick="setFilter('danger')">🔴 위험</button>
+  </div>
+  <div class="rider-count" id="riderCount"></div>
+
+  <div class="list" id="riderList">
+    <div class="empty"><div class="empty-icon">🛵</div><div>데이터를 불러오는 중입니다…</div></div>
+  </div>
+</div>
+
+<!-- ── 시간대별 탭 ── -->
+<div id="tabTime" style="display:none">
+  <div class="time-tab-content">
+
+    <div class="sec-title"><span class="sec-dot"></span> 피크타임별 현황</div>
+    <div class="peak-section-scroll" id="peakSectionCards">
+      <div style="color:#bbb;font-size:13px;padding:20px">데이터 수집 중...</div>
+    </div>
+
+    <div class="sec-title"><span class="sec-dot"></span> 시간대별 수락 주문</div>
+    <div class="time-stat-grid">
+      <div class="time-stat-card" style="border-left-color:#6b7280"><div class="ts-label">🌅 아침</div><div class="ts-val" style="color:#6b7280" id="statMorning">-<span class="sum-unit">건</span></div></div>
+      <div class="time-stat-card" style="border-left-color:#ea580c"><div class="ts-label">⚡ 점심피크</div><div class="ts-val" style="color:#ea580c" id="statLunchPeak">-<span class="sum-unit">건</span></div></div>
+      <div class="time-stat-card" style="border-left-color:#3b82f6"><div class="ts-label">🕑 점심논피크</div><div class="ts-val" style="color:#3b82f6" id="statNonPeak">-<span class="sum-unit">건</span></div></div>
+      <div class="time-stat-card" style="border-left-color:#C84B31"><div class="ts-label">🌆 저녁피크</div><div class="ts-val" style="color:#C84B31" id="statDinnerPeak">-<span class="sum-unit">건</span></div></div>
+      <div class="time-stat-card" style="border-left-color:#7c3aed"><div class="ts-label">🌙 저녁논피크</div><div class="ts-val" style="color:#7c3aed" id="statNight">-<span class="sum-unit">건</span></div></div>
+    </div>
+
+    <div class="cur-total-row">
+      <div class="sum-card"><div class="sum-label">▶ 현재 시간대</div><div class="sum-value" style="color:#C84B31" id="statCurrent">-</div></div>
+      <div class="sum-card"><div class="sum-label">📦 오늘 전체</div><div class="sum-value blue" id="statTotal">-<span class="sum-unit">건</span></div></div>
+    </div>
+
+    <div id="timeslotGroups">
+      <div class="empty"><div class="empty-icon">📊</div><div>시간대 데이터 수집 중...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 라이더 상세 모달 -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-name" id="mName"></div>
+    <div class="modal-status" id="mStatus"></div>
+
+    <!-- 거절률 핵심 박스 -->
+    <div class="modal-reject-box" id="mRejectBox">
+      <span class="modal-reject-label">거절률</span>
+      <span class="modal-reject-val" id="mRate"></span>
+    </div>
+
+    <div class="modal-grid">
+      <div class="modal-stat"><div class="modal-stat-label">완료</div><div class="modal-stat-val" id="mCompleted"></div></div>
+      <div class="modal-stat"><div class="modal-stat-label">거절/무시</div><div class="modal-stat-val red" id="mRejected"></div></div>
+      <div class="modal-stat"><div class="modal-stat-label">취소</div><div class="modal-stat-val orange" id="mCancelled"></div></div>
+    </div>
+
+    <div class="modal-peak-box">
+      <div class="modal-peak-title">피크타임 실적</div>
+      <div class="modal-peak-grid">
+        <div class="modal-peak-item"><div class="modal-peak-val" id="mLunch">-</div><div class="modal-peak-label">점심피크</div></div>
+        <div class="modal-peak-item"><div class="modal-peak-val" id="mDinner">-</div><div class="modal-peak-label">저녁피크</div></div>
+        <div class="modal-peak-item"><div class="modal-peak-val" id="mNonPeak">-</div><div class="modal-peak-label">논피크</div></div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-copy" id="btnCopy">📋 문자 복사</button>
+      <button class="btn-sms" id="btnSms">📱 문자 보내기</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ───────────────────────────────────────────────
+let riderState = null, peakState = null;
+let filterMode = 'all';
+let selectedRider = null;
+let countdownVal = 30;
+let countdownTimer = null;
+let prevCapFull = false;
+
+// ── 탭 전환 ──────────────────────────────────────────
+function showTab(tab) {
+  document.getElementById('tabRiders').style.display = tab === 'riders' ? '' : 'none';
+  document.getElementById('tabTime').style.display   = tab === 'time'   ? '' : 'none';
+  document.getElementById('tabRidersBtn').classList.toggle('active', tab === 'riders');
+  document.getElementById('tabTimeBtn').classList.toggle('active', tab === 'time');
+}
+
+// ── 필터 ────────────────────────────────────────────
+function setFilter(mode) {
+  filterMode = mode;
+  ['fAll','fOnline','fDanger'].forEach(id => document.getElementById(id).classList.remove('active'));
+  const idMap = { all:'fAll', online:'fOnline', danger:'fDanger' };
+  document.getElementById(idMap[mode]).classList.add('active');
+  renderRiders();
+}
+
+// ── 거절률 색상 ─────────────────────────────────────
+function rateClass(r) {
+  if (r >= 10) return 'danger';
+  if (r >= 3)  return 'warn';
+  return 'ok';
+}
+
+// ── 시간 표시 ───────────────────────────────────────
+function timeAgo(ts) {
+  if (!ts) return '-';
+  const sec = Math.floor((Date.now() - ts) / 1000);
+  if (sec < 60) return '방금 전';
+  if (sec < 3600) return Math.floor(sec/60) + '분 전';
+  return Math.floor(sec/3600) + '시간 전';
+}
+
+function fmt(n) {
+  return Number.isInteger(n) ? n : parseFloat(Number(n).toFixed(1));
+}
+
+// ── 라이더 렌더링 ────────────────────────────────────
+function renderRiders() {
+  const list = document.getElementById('riderList');
+  if (!riderState || !riderState.riders || !riderState.riders.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">🛵</div><div>데이터를 불러오는 중입니다…</div></div>';
+    return;
+  }
+
+  const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+  let riders = [...riderState.riders];
+
+  if (filterMode === 'online') riders = riders.filter(r => r.status !== '오프라인');
+  if (filterMode === 'danger') riders = riders.filter(r => r.rejectRate >= 10);
+  if (q) riders = riders.filter(r => (r.name||'').toLowerCase().includes(q));
+
+  // 정렬: 거절률 내림차순, 오프라인은 뒤로
+  riders.sort((a, b) => {
+    const ao = a.status === '오프라인' ? 1 : 0;
+    const bo = b.status === '오프라인' ? 1 : 0;
+    if (ao !== bo) return ao - bo;
+    return b.rejectRate - a.rejectRate;
+  });
+
+  const total = riderState.riders.length;
+  const online = riderState.riders.filter(r => r.status !== '오프라인').length;
+  document.getElementById('riderCount').textContent =
+    filterMode === 'online' ? `${riders.length}명 운행중 / 전체 ${total}명` :
+    filterMode === 'danger' ? `위험 ${riders.length}명` :
+    `전체 ${total}명 (운행중 ${online}명)`;
+
+  if (!riders.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>해당하는 라이더가 없습니다</div></div>';
+    return;
+  }
+
+  const maxRate = Math.max(...riders.map(r => r.rejectRate), 10);
+
+  list.innerHTML = riders.map(r => {
+    const cls = r.status === '오프라인' ? 'offline' : rateClass(r.rejectRate);
+    const ratCls = rateClass(r.rejectRate);
+    const barW = Math.min(r.rejectRate / maxRate * 100, 100).toFixed(1);
+    const rankStr = r.rank ? `#${r.rank} 슬롯` : '오프라인';
+    const l = r.lunchPeak  > 0 ? r.lunchPeak  : '-';
+    const d = r.dinnerPeak > 0 ? r.dinnerPeak : '-';
+    const n = r.nonPeak    > 0 ? r.nonPeak    : '-';
+    return `
+    <div class="rider-card ${cls}" onclick="openModal(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+      <div class="card-top">
+        <div>
+          <div class="card-name">${r.name}</div>
+          <div class="card-sub">${rankStr}${r.phone ? ' · ' + r.phone : ''}</div>
+        </div>
+        <span class="status-badge status-${r.status}">${r.status}</span>
+      </div>
+
+      <div class="reject-rate-row">
+        <span class="reject-rate-num ${ratCls}">${fmt(r.rejectRate)}</span>
+        <span class="reject-rate-unit">%</span>
+        <span class="reject-rate-label">거절률</span>
+      </div>
+      <div class="rate-bar-bg">
+        <div class="rate-bar ${ratCls}" style="width:${barW}%"></div>
+      </div>
+
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-val">${r.completed||0}</div>
+          <div class="metric-label">완료</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val red">${r.rejected||0}</div>
+          <div class="metric-label">거절</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val orange">${r.cancelled||0}</div>
+          <div class="metric-label">취소</div>
+        </div>
+      </div>
+
+      <div class="peak-row">
+        <div class="peak-item"><div class="peak-item-val">${l}</div><div class="peak-item-label">점심피크</div></div>
+        <div class="peak-item"><div class="peak-item-val">${d}</div><div class="peak-item-label">저녁피크</div></div>
+        <div class="peak-item"><div class="peak-item-val">${n}</div><div class="peak-item-label">논피크</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── 시간대 그룹핑 ────────────────────────────────────
+function groupTimeSlots(slots) {
+  const valid = slots.filter(s => {
+    const m = s.time.match(/(\d{1,2}):(\d{2})/);
+    return m !== null;
+  });
+  let pgIdx = 0, prevPeak = false;
+  const tagged = valid.map(s => {
+    if (s.isPeak && !prevPeak) pgIdx++;
+    prevPeak = s.isPeak;
+    return { ...s, _pg: s.isPeak ? pgIdx : 0 };
+  });
+  const fp1 = tagged.findIndex(s => s._pg === 1);
+  const fp2 = tagged.findIndex(s => s._pg === 2);
+  const groups = [
+    { key:'morning',    label:'아침',      emoji:'🌅', color:'#6b7280', slots:[] },
+    { key:'lunchPeak',  label:'점심피크',  emoji:'⚡', color:'#ea580c', slots:[] },
+    { key:'nonPeak',    label:'점심논피크', emoji:'🕑', color:'#3b82f6', slots:[] },
+    { key:'dinnerPeak', label:'저녁피크',  emoji:'🌆', color:'#C84B31', slots:[] },
+    { key:'night',      label:'저녁논피크', emoji:'🌙', color:'#7c3aed', slots:[] },
+  ];
+  const G = {};
+  groups.forEach(g => G[g.key] = g.slots);
+  tagged.forEach((s, i) => {
+    if      (s._pg === 1) G.lunchPeak.push(s);
+    else if (s._pg === 2) G.dinnerPeak.push(s);
+    else if (fp1 === -1 || i < fp1) G.morning.push(s);
+    else if (fp2 === -1 || i < fp2) G.nonPeak.push(s);
+    else G.night.push(s);
+  });
+  return groups;
+}
+
+// ── 시간대별 렌더링 ──────────────────────────────────
+function renderTimeSlots() {
+  if (!peakState || !peakState.timeSlots || !peakState.timeSlots.length) return;
+
+  const slots = peakState.timeSlots;
+  let currentIdx = -1;
+  slots.forEach((s, i) => { if (s.accepted > 0 || s.workers > 0) currentIdx = i; });
+  const maxAcc = Math.max(...slots.map(s => s.accepted), 1);
+
+  const groups = groupTimeSlots(slots);
+  const gTotals = {};
+  groups.forEach(g => { gTotals[g.key] = g.slots.reduce((s, c) => s + (c.accepted||0), 0); });
+  const total = Object.values(gTotals).reduce((a,b) => a+b, 0);
+
+  document.getElementById('statMorning').innerHTML    = `${fmt(gTotals.morning   ||0)}<span class="sum-unit">건</span>`;
+  document.getElementById('statLunchPeak').innerHTML  = `${fmt(gTotals.lunchPeak ||0)}<span class="sum-unit">건</span>`;
+  document.getElementById('statNonPeak').innerHTML    = `${fmt(gTotals.nonPeak   ||0)}<span class="sum-unit">건</span>`;
+  document.getElementById('statDinnerPeak').innerHTML = `${fmt(gTotals.dinnerPeak||0)}<span class="sum-unit">건</span>`;
+  document.getElementById('statNight').innerHTML      = `${fmt(gTotals.night     ||0)}<span class="sum-unit">건</span>`;
+  document.getElementById('statTotal').innerHTML      = `${fmt(total)}<span class="sum-unit">건</span>`;
+
+  const curVal  = currentIdx >= 0 ? slots[currentIdx].accepted : 0;
+  const curTime = currentIdx >= 0 ? slots[currentIdx].time : '-';
+  document.getElementById('statCurrent').innerHTML =
+    `${fmt(curVal)}<span class="sum-unit">건</span> <span style="font-size:11px;color:#aaa">${curTime}</span>`;
+
+  // 피크타임별 현황
+  const psEl = document.getElementById('peakSectionCards');
+  if (peakState.peakSections && peakState.peakSections.length) {
+    const colors = ['#6b7280','#ea580c','#3b82f6','#C84B31','#7c3aed'];
+    const emojis = ['🌅','⚡','🕑','🌆','🌙'];
+    psEl.innerHTML = peakState.peakSections.map((ps, i) => {
+      const color = colors[i] || '#888';
+      const emoji = emojis[i] || '•';
+      const pct   = Math.min(ps.rate || 0, 100);
+      const surplus = ps.completed > ps.target
+        ? `<span style="color:#22c55e">+${fmt(ps.completed - ps.target)}</span>`
+        : ps.remaining > 0 ? `<span style="color:#f59e0b">잔여 ${fmt(ps.remaining)}</span>`
+        : `<span style="color:#ccc">-</span>`;
+      const badge = ps.inProgress
+        ? `<span style="background:#fef3c7;color:#b45309;font-size:9px;padding:1px 5px;border-radius:6px">진행중</span>`
+        : ps.rate >= 100 ? `<span style="color:#22c55e">✓</span>` : '';
+      return `
+      <div class="ps-card" style="border-top-color:${color}">
+        <div class="ps-name" style="color:${color}">${emoji} ${ps.name} ${badge}</div>
+        <div class="ps-rate" style="color:${color}">${fmt(ps.rate)}<span style="font-size:13px">%</span></div>
+        <div class="ps-bar-bg"><div class="ps-bar" style="background:${color};width:${pct}%"></div></div>
+        <div class="ps-detail"><span>목표 ${ps.target}</span><span>완료 ${fmt(ps.completed)}</span></div>
+        <div class="ps-surplus">${surplus}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // 시간대 그룹 바 차트
+  const groupEl = document.getElementById('timeslotGroups');
+  groupEl.innerHTML = groups.map(g => {
+    const groupTotal = gTotals[g.key] || 0;
+    const slotsHtml = g.slots.length
+      ? g.slots.map(s => {
+          const origIdx = slots.indexOf(s);
+          const isCur = origIdx === currentIdx;
+          const isEmpty = s.accepted === 0 && s.workers === 0;
+          const barH = isEmpty ? 0 : Math.max(3, Math.round(s.accepted / maxAcc * 60));
+          return `
+          <div class="ts-col ${s.isPeak?'peak':''} ${isCur?'current':''} ${isEmpty?'empty':''}">
+            <div class="ts-time">${s.isPeak?'⚡':''}${s.time}</div>
+            <div class="ts-bar-wrap">
+              ${isCur ? '<div class="ts-now-label">▶ 현재</div>' : ''}
+              <div class="ts-bar-bg"><div class="ts-bar" style="height:${barH}px"></div></div>
+              <div class="ts-accepted">${isEmpty ? '-' : s.accepted}</div>
+              <div class="ts-workers">👤${isEmpty ? '-' : s.workers}</div>
+            </div>
+          </div>`;
+        }).join('')
+      : '<div style="color:#ccc;font-size:12px;padding:8px">데이터 없음</div>';
+
+    return `
+    <div class="slot-group">
+      <div class="slot-group-header">
+        <span class="slot-group-name" style="color:${g.color}">${g.emoji} ${g.label}</span>
+        <span class="slot-group-total" style="color:${g.color}">${fmt(groupTotal)}</span>
+        <span class="slot-group-unit">건 (${g.slots.length}구간)</span>
+      </div>
+      <div class="slots-row">${slotsHtml}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── 데이터 로드 ──────────────────────────────────────
+async function loadData() {
+  try {
+    const [rRes, pRes] = await Promise.all([
+      fetch('/api/coupang/riders').then(r => r.json()).catch(() => null),
+      fetch('/api/coupang/peak').then(r => r.json()).catch(() => null),
+    ]);
+
+    if (rRes && rRes.riders) {
+      riderState = rRes;
+      const cap = rRes.capacity || {};
+      const isFull = cap.current >= cap.max;
+      const capPill = document.getElementById('capPill');
+      capPill.textContent = `${cap.current ?? '-'}/${cap.max ?? 10}명`;
+      capPill.className = 'cap-pill' + (isFull ? ' full' : cap.current / cap.max >= 0.9 ? ' warn' : '');
+      document.getElementById('waitPill').textContent = `⏳${rRes.waiting ?? 0}대기`;
+
+      // 꽉 참 배너
+      const alertEl = document.getElementById('capAlert');
+      if (isFull) {
+        document.getElementById('capAlertText').textContent = `${cap.current}/${cap.max}명`;
+        alertEl.classList.add('show');
+        if (!prevCapFull) { try { navigator.vibrate([300,100,300,100,300]); } catch(e){} }
+      } else {
+        alertEl.classList.remove('show');
+      }
+      prevCapFull = isFull;
+
+      // 요약
+      const s = rRes.summary || {};
+      document.getElementById('sumOnline').innerHTML    = `${s.online??'-'}<span class="sum-unit">명</span>`;
+      document.getElementById('sumCompleted').innerHTML = `${s.completed??'-'}<span class="sum-unit">건</span>`;
+      const rEl = document.getElementById('sumRejected');
+      rEl.innerHTML = `${s.rejected??'-'}<span class="sum-unit">건</span>`;
+      rEl.className = `sum-value ${(s.rejected||0)>3?'danger':(s.rejected||0)>0?'warn':'ok'}`;
+      document.getElementById('sumCancelled').innerHTML = `${s.cancelled??'-'}<span class="sum-unit">건</span>`;
+
+      // 전체 거절률 — peakState에서 채워짐 (peak-dashboard 직접 스크래핑 값)
+
+      document.getElementById('lastUpdate').textContent = rRes.ts ? timeAgo(rRes.ts) : '-';
+      renderRiders();
+    }
+
+    if (pRes && pRes.timeSlots) {
+      peakState = pRes;
+      const daily = pRes.dailyRate;
+      const drEl = document.getElementById('sumDailyRate');
+      drEl.innerHTML = `${daily??'-'}<span class="sum-unit">%</span>`;
+      drEl.className = `sum-value ${daily>=80?'ok':daily>=50?'warn':'danger'}`;
+
+      // 페이지에서 직접 긁어온 거절률 / 수락전·후 취소
+      const rrEl = document.getElementById('sumRejectRate');
+      const rr = pRes.rejectRate ?? null;
+      rrEl.innerHTML = rr !== null ? `${rr}<span class="sum-unit">%</span>` : `-<span class="sum-unit">%</span>`;
+      rrEl.className = `sum-value ${rr !== null ? rateClass(rr) : ''}`;
+
+      const preEl = document.getElementById('sumPreCancel');
+      preEl.innerHTML = `${pRes.preAcceptCancel ?? '-'}<span class="sum-unit">건</span>`;
+      preEl.className = `sum-value ${(pRes.preAcceptCancel||0) > 0 ? 'warn' : 'ok'}`;
+
+      const postEl = document.getElementById('sumPostCancel');
+      postEl.innerHTML = `${pRes.postAcceptCancel ?? '-'}<span class="sum-unit">건</span>`;
+      postEl.className = `sum-value ${(pRes.postAcceptCancel||0) > 0 ? 'warn' : 'ok'}`;
+
+      renderTimeSlots();
+    }
+  } catch(e) {
+    console.error('[쿠팡 모바일] 로드 실패:', e);
+  }
+}
+
+// ── 카운트다운 ───────────────────────────────────────
+function resetCountdown() {
+  countdownVal = 30;
+  if (countdownTimer) clearInterval(countdownTimer);
+  countdownTimer = setInterval(() => {
+    countdownVal--;
+    document.getElementById('countdown').textContent = countdownVal + 's';
+    if (countdownVal <= 0) { clearInterval(countdownTimer); loadData().then(resetCountdown); }
+  }, 1000);
+  document.getElementById('countdown').textContent = countdownVal + 's';
+}
+
+// ── 모달 ─────────────────────────────────────────────
+function openModal(r) {
+  if (typeof r === 'string') r = JSON.parse(r);
+  selectedRider = r;
+  const cls = rateClass(r.rejectRate);
+  document.getElementById('mName').textContent = r.name;
+  document.getElementById('mStatus').textContent = (r.rank ? `#${r.rank} 슬롯 · ` : '') + r.status;
+  const rateEl = document.getElementById('mRate');
+  rateEl.textContent = fmt(r.rejectRate) + '%';
+  rateEl.className = 'modal-reject-val ' + cls;
+  const box = document.getElementById('mRejectBox');
+  box.className = 'modal-reject-box ' + cls;
+  document.getElementById('mCompleted').textContent = r.completed || 0;
+  document.getElementById('mRejected').textContent  = r.rejected  || 0;
+  document.getElementById('mCancelled').textContent = r.cancelled || 0;
+  document.getElementById('mLunch').textContent    = r.lunchPeak  > 0 ? r.lunchPeak  : '-';
+  document.getElementById('mDinner').textContent   = r.dinnerPeak > 0 ? r.dinnerPeak : '-';
+  document.getElementById('mNonPeak').textContent  = r.nonPeak    > 0 ? r.nonPeak    : '-';
+  document.getElementById('btnCopy').textContent = '📋 문자 복사';
+  document.getElementById('btnCopy').className = 'btn-copy';
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+
+document.getElementById('btnCopy').addEventListener('click', () => {
+  if (!selectedRider) return;
+  const r = selectedRider;
+  const text = `${r.name}님\n완료 ${r.completed}건 / 거절 ${r.rejected}건 / 취소 ${r.cancelled}건\n거절률 ${fmt(r.rejectRate)}%\n거절률 관리 부탁드립니다.`;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btnCopy');
+    btn.textContent = '✅ 복사됨!';
+    btn.className = 'btn-copy copied';
+    showToast('문자가 클립보드에 복사됐습니다.');
+  }).catch(() => showToast('복사 실패'));
+});
+
+document.getElementById('btnSms').addEventListener('click', () => {
+  if (!selectedRider) return;
+  const r = selectedRider;
+  const phone = (r.phone || '').replace(/[^0-9]/g, '');
+  if (!phone) { showToast('전화번호가 없습니다.'); return; }
+  const msg = `${r.name}님\n완료 ${r.completed}건 / 거절 ${r.rejected}건 / 취소 ${r.cancelled}건\n거절률 ${fmt(r.rejectRate)}%\n거절률 관리 부탁드립니다.`;
+  navigator.clipboard.writeText(msg).catch(() => {});
+  window.location.href = 'sms:' + phone;
+  showToast('문자앱 열림 — 붙여넣기 하세요');
+});
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── 시작 ─────────────────────────────────────────────
+loadData().then(resetCountdown);
+</script>
+</body>
+</html>
