@@ -47,7 +47,7 @@ function mergeCoupangRiders(existing, incoming) {
   const mergedNames = new Set(merged.map(r => r.name));
   (existing || []).forEach(r => {
     if (!mergedNames.has(r.name)) {
-      const hadActivity = (r.completed || 0) + (r.rejected || 0) + (r.cancelled || 0) > 0;
+      const hadActivity = (r.completed || 0) + (r.rejected || 0) + (r.cancelled || 0) + (r.outOfOrder || 0) > 0;
       if (hadActivity || r.status === '오프라인') {
         merged.push({ ...r, status: '오프라인', rank: null });
         mergedNames.add(r.name);
