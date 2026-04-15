@@ -77,3 +77,4 @@ app.get('/mobile', (req, res) => res.sendFile(path.join(__dirname, 'baemin-mobil
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 app.listen(PORT, () => console.log(`Cloud server on port ${PORT}`));
+// deploy trigger
