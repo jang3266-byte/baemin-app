@@ -14,6 +14,29 @@ let riderData = { data: [], ts: null };
 // 쿠팡이츠 데이터
 let coupangRiders = { riders: [], capacity: { current: 0, max: 10 }, waiting: 0, summary: {}, ts: null };
 let coupangPeak   = { timeSlots: [], dailyRate: 0, peakSections: [], ts: null };
+let coupangRiderDate = null; // 자정 리셋용 날짜 추적
+
+// 오늘 참여한 모든 라이더 누적 (슬롯 이탈한 라이더 → 오프라인으로 유지)
+function mergeCoupangRiders(existing, incoming) {
+  const today = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }).slice(0, 10);
+  if (coupangRiderDate !== today) {
+    coupangRiderDate = today;
+    return incoming.slice(); // 날짜 바뀌면 초기화
+  }
+  const activeNames = new Set(incoming.map(r => r.name));
+  const merged = incoming.map(r => ({ ...r }));
+  const mergedNames = new Set(merged.map(r => r.name));
+  existing.forEach(r => {
+    if (!mergedNames.has(r.name)) {
+      const hadActivity = (r.completed || 0) + (r.rejected || 0) + (r.cancelled || 0) > 0;
+      if (hadActivity || r.status === '오프라인') {
+        merged.push({ ...r, status: '오프라인', rank: null });
+        mergedNames.add(r.name);
+      }
+    }
+  });
+  return merged;
+}
 
 // CORS
 app.use((req, res, next) => {
@@ -52,9 +75,10 @@ app.get('/api/check-refresh', (req, res) => res.json({ pending: false }));
 app.post('/api/coupang/riders', (req, res) => {
   const d = req.body;
   if (!d || !Array.isArray(d.riders)) return res.status(400).json({ error: 'invalid' });
-  coupangRiders = { ...d, ts: d.ts || Date.now() };
-  console.log(`[쿠팡 라이더] ${d.riders.length}명`);
-  res.json({ ok: true, count: d.riders.length });
+  const mergedRiders = mergeCoupangRiders(coupangRiders.riders || [], d.riders);
+  coupangRiders = { ...d, riders: mergedRiders, ts: d.ts || Date.now() };
+  console.log(`[쿠팡 라이더] 활성 ${d.riders.length}명 / 전체(오늘) ${mergedRiders.length}명`);
+  res.json({ ok: true, count: mergedRiders.length });
 });
 app.get('/api/coupang/riders', (req, res) => res.json(coupangRiders));
 

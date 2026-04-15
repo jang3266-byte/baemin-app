@@ -20,6 +20,28 @@ const coupangRidersFile = path.join(__dirname, 'coupang-riders.json');
 const coupangPeakFile = path.join(__dirname, 'coupang-peak.json');
 if (fs.existsSync(coupangRidersFile)) { try { coupangRiders = JSON.parse(fs.readFileSync(coupangRidersFile, 'utf8')); } catch(e){} }
 if (fs.existsSync(coupangPeakFile))   { try { coupangPeak   = JSON.parse(fs.readFileSync(coupangPeakFile,   'utf8')); } catch(e){} }
+let coupangRiderDate = null; // 자정 리셋용
+
+// 오늘 참여한 모든 라이더 누적 (슬롯 이탈한 라이더 → 오프라인으로 유지)
+function mergeCoupangRiders(existing, incoming) {
+  const today = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }).slice(0, 10);
+  if (coupangRiderDate !== today) {
+    coupangRiderDate = today;
+    return incoming.slice();
+  }
+  const merged = incoming.map(r => ({ ...r }));
+  const mergedNames = new Set(merged.map(r => r.name));
+  existing.forEach(r => {
+    if (!mergedNames.has(r.name)) {
+      const hadActivity = (r.completed || 0) + (r.rejected || 0) + (r.cancelled || 0) > 0;
+      if (hadActivity || r.status === '오프라인') {
+        merged.push({ ...r, status: '오프라인', rank: null });
+        mergedNames.add(r.name);
+      }
+    }
+  });
+  return merged;
+}
 let refreshPending = false;
 const riderDataFile = path.join(__dirname, 'rider-data.json');
 if (fs.existsSync(riderDataFile)) {
@@ -106,10 +128,11 @@ app.get('/api/riders', (req, res) => {
 app.post('/api/coupang/riders', (req, res) => {
   const d = req.body;
   if (!d || !Array.isArray(d.riders)) return res.status(400).json({ error: 'invalid' });
-  coupangRiders = { ...d, ts: d.ts || Date.now() };
+  const mergedRiders = mergeCoupangRiders(coupangRiders.riders || [], d.riders);
+  coupangRiders = { ...d, riders: mergedRiders, ts: d.ts || Date.now() };
   fs.writeFile(coupangRidersFile, JSON.stringify(coupangRiders), () => {});
-  console.log(`[쿠팡 라이더] ${d.riders.length}명 저장 (${d.capacity?.current}/${d.capacity?.max}명)`);
-  res.json({ ok: true, count: d.riders.length });
+  console.log(`[쿠팡 라이더] 활성 ${d.riders.length}명 / 전체(오늘) ${mergedRiders.length}명`);
+  res.json({ ok: true, count: mergedRiders.length });
 });
 
 app.get('/api/coupang/riders', (req, res) => res.json(coupangRiders));
