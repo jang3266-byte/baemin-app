@@ -139,10 +139,15 @@ app.get('/api/riders', (req, res) => {
 });
 
 // ── 쿠팡이츠 API ─────────────────────────────────────────────────
+const calcRejectRate = r => {
+  const total = (r.rejected||0) + (r.cancelled||0) + (r.completed||0);
+  return total > 0 ? parseFloat(((r.rejected||0) + (r.cancelled||0)) / total * 100).toFixed(1) * 1 : 0;
+};
 app.post('/api/coupang/riders', (req, res) => {
   const d = req.body;
   if (!d || !Array.isArray(d.riders)) return res.status(400).json({ error: 'invalid' });
-  const mergedRiders = mergeCoupangRiders(coupangRiders.riders || [], d.riders);
+  const mergedRiders = mergeCoupangRiders(coupangRiders.riders || [], d.riders)
+    .map(r => ({ ...r, rejectRate: calcRejectRate(r) })); // 거절률 재계산 (거절+취소 포함)
   coupangRiders = { ...d, riders: mergedRiders, ts: d.ts || Date.now() };
   fs.writeFile(coupangRidersFile, JSON.stringify(coupangRiders), () => {});
   console.log(`[쿠팡 라이더] 활성 ${d.riders.length}명 / 전체(오늘) ${mergedRiders.length}명`);
