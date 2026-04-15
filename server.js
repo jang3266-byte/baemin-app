@@ -20,6 +20,10 @@ const coupangRidersFile = path.join(__dirname, 'coupang-riders.json');
 const coupangPeakFile = path.join(__dirname, 'coupang-peak.json');
 if (fs.existsSync(coupangPeakFile))   { try { coupangPeak = JSON.parse(fs.readFileSync(coupangPeakFile, 'utf8')); } catch(e){} }
 const _todayKST = () => new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }).slice(0, 10);
+const calcRejectRate = r => {
+  const total = (r.rejected||0) + (r.cancelled||0) + (r.completed||0);
+  return total > 0 ? parseFloat(((r.rejected||0) + (r.cancelled||0)) / total * 100).toFixed(1) * 1 : 0;
+};
 let coupangRiderDate = null; // 자정 리셋용
 // 오늘 데이터면 파일에서 복원 + 날짜 세팅 (오늘 누적 이어받기)
 if (fs.existsSync(coupangRidersFile)) {
@@ -27,8 +31,10 @@ if (fs.existsSync(coupangRidersFile)) {
     const saved = JSON.parse(fs.readFileSync(coupangRidersFile, 'utf8'));
     const savedDate = saved.ts ? new Date(saved.ts).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }).slice(0, 10) : null;
     if (savedDate === _todayKST()) {
+      // 파일 복원 시 거절률 재계산 (취소 포함 공식으로 업데이트)
+      saved.riders = (saved.riders || []).map(r => ({ ...r, rejectRate: calcRejectRate(r) }));
       coupangRiders = saved;
-      coupangRiderDate = savedDate; // 오늘 데이터 → 날짜 세팅하여 머지 이어받기
+      coupangRiderDate = savedDate;
       console.log(`✅ 쿠팡 라이더 복원: ${saved.riders?.length}명 (오늘 누적)`);
     }
   } catch(e) {}
@@ -139,10 +145,6 @@ app.get('/api/riders', (req, res) => {
 });
 
 // ── 쿠팡이츠 API ─────────────────────────────────────────────────
-const calcRejectRate = r => {
-  const total = (r.rejected||0) + (r.cancelled||0) + (r.completed||0);
-  return total > 0 ? parseFloat(((r.rejected||0) + (r.cancelled||0)) / total * 100).toFixed(1) * 1 : 0;
-};
 app.post('/api/coupang/riders', (req, res) => {
   const d = req.body;
   if (!d || !Array.isArray(d.riders)) return res.status(400).json({ error: 'invalid' });
