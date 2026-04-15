@@ -10,6 +10,10 @@ const PORT = process.env.PORT || 3737;
 // 메모리에 라이더 데이터 보관
 let riderData = { data: [], ts: null };
 
+// 쿠팡이츠 데이터
+let coupangRiders = { riders: [], capacity: { current: 0, max: 10 }, waiting: 0, summary: {}, ts: null };
+let coupangPeak   = { timeSlots: [], dailyRate: 0, peakSections: [], ts: null };
+
 // CORS
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -43,7 +47,32 @@ app.get('/api/riders', (req, res) => res.json(riderData));
 app.post('/api/request-refresh', (req, res) => res.json({ ok: true }));
 app.get('/api/check-refresh', (req, res) => res.json({ pending: false }));
 
+// ── 쿠팡이츠 API ─────────────────────────────────────────────────
+app.post('/api/coupang/riders', (req, res) => {
+  const d = req.body;
+  if (!d || !Array.isArray(d.riders)) return res.status(400).json({ error: 'invalid' });
+  coupangRiders = { ...d, ts: d.ts || Date.now() };
+  console.log(`[쿠팡 라이더] ${d.riders.length}명`);
+  res.json({ ok: true, count: d.riders.length });
+});
+app.get('/api/coupang/riders', (req, res) => res.json(coupangRiders));
+
+app.post('/api/coupang/peak', (req, res) => {
+  const d = req.body;
+  if (!d || !Array.isArray(d.timeSlots)) return res.status(400).json({ error: 'invalid' });
+  coupangPeak = { ...d, ts: d.ts || Date.now() };
+  console.log(`[쿠팡 피크] 시간대 ${d.timeSlots.length}개`);
+  res.json({ ok: true, count: d.timeSlots.length });
+});
+app.get('/api/coupang/peak', (req, res) => res.json(coupangPeak));
+
 // 정적 파일 (HTML 대시보드)
+const noCache = (res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+};
+app.get('/coupang',        (req, res) => { noCache(res); res.sendFile(path.join(__dirname, 'coupang.html')); });
+app.get('/coupang-mobile', (req, res) => { noCache(res); res.sendFile(path.join(__dirname, 'coupang-mobile.html')); });
 app.get('/mobile', (req, res) => res.sendFile(path.join(__dirname, 'baemin-mobile.html')));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
