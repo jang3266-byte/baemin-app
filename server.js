@@ -18,20 +18,34 @@ let coupangRiders = { riders: [], capacity: { current: 0, max: 10 }, waiting: 0,
 let coupangPeak = { timeSlots: [], dailyRate: 0, ts: null };
 const coupangRidersFile = path.join(__dirname, 'coupang-riders.json');
 const coupangPeakFile = path.join(__dirname, 'coupang-peak.json');
-if (fs.existsSync(coupangRidersFile)) { try { coupangRiders = JSON.parse(fs.readFileSync(coupangRidersFile, 'utf8')); } catch(e){} }
-if (fs.existsSync(coupangPeakFile))   { try { coupangPeak   = JSON.parse(fs.readFileSync(coupangPeakFile,   'utf8')); } catch(e){} }
+if (fs.existsSync(coupangPeakFile))   { try { coupangPeak = JSON.parse(fs.readFileSync(coupangPeakFile, 'utf8')); } catch(e){} }
+const _todayKST = () => new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }).slice(0, 10);
 let coupangRiderDate = null; // 자정 리셋용
+// 오늘 데이터면 파일에서 복원 + 날짜 세팅 (오늘 누적 이어받기)
+if (fs.existsSync(coupangRidersFile)) {
+  try {
+    const saved = JSON.parse(fs.readFileSync(coupangRidersFile, 'utf8'));
+    const savedDate = saved.ts ? new Date(saved.ts).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }).slice(0, 10) : null;
+    if (savedDate === _todayKST()) {
+      coupangRiders = saved;
+      coupangRiderDate = savedDate; // 오늘 데이터 → 날짜 세팅하여 머지 이어받기
+      console.log(`✅ 쿠팡 라이더 복원: ${saved.riders?.length}명 (오늘 누적)`);
+    }
+  } catch(e) {}
+}
 
 // 오늘 참여한 모든 라이더 누적 (슬롯 이탈한 라이더 → 오프라인으로 유지)
 function mergeCoupangRiders(existing, incoming) {
   const today = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }).slice(0, 10);
-  if (coupangRiderDate !== today) {
+  // 날짜가 바뀐 경우에만 리셋 (null이면 처음 실행 → 리셋 안 함, 무조건 머지)
+  if (coupangRiderDate !== null && coupangRiderDate !== today) {
     coupangRiderDate = today;
     return incoming.slice();
   }
+  coupangRiderDate = today;
   const merged = incoming.map(r => ({ ...r }));
   const mergedNames = new Set(merged.map(r => r.name));
-  existing.forEach(r => {
+  (existing || []).forEach(r => {
     if (!mergedNames.has(r.name)) {
       const hadActivity = (r.completed || 0) + (r.rejected || 0) + (r.cancelled || 0) > 0;
       if (hadActivity || r.status === '오프라인') {

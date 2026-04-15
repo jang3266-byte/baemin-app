@@ -19,14 +19,15 @@ let coupangRiderDate = null; // 자정 리셋용 날짜 추적
 // 오늘 참여한 모든 라이더 누적 (슬롯 이탈한 라이더 → 오프라인으로 유지)
 function mergeCoupangRiders(existing, incoming) {
   const today = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }).slice(0, 10);
-  if (coupangRiderDate !== today) {
+  // 날짜가 바뀐 경우에만 리셋 (null이면 처음 실행 → 리셋 안 함, 무조건 머지)
+  if (coupangRiderDate !== null && coupangRiderDate !== today) {
     coupangRiderDate = today;
-    return incoming.slice(); // 날짜 바뀌면 초기화
+    return incoming.slice();
   }
-  const activeNames = new Set(incoming.map(r => r.name));
+  coupangRiderDate = today;
   const merged = incoming.map(r => ({ ...r }));
   const mergedNames = new Set(merged.map(r => r.name));
-  existing.forEach(r => {
+  (existing || []).forEach(r => {
     if (!mergedNames.has(r.name)) {
       const hadActivity = (r.completed || 0) + (r.rejected || 0) + (r.cancelled || 0) > 0;
       if (hadActivity || r.status === '오프라인') {
