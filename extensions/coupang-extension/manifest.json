@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "쿠팡이츠 라이더 모니터링",
+  "version": "1.0.0",
+  "description": "쿠팡이츠 파트너에서 라이더 데이터를 수집하여 모니터링 서버로 전송",
+  "permissions": ["storage", "alarms"],
+  "host_permissions": [
+    "*://*.coupangeats.com/*",
+    "*://*.coupang.com/*",
+    "http://localhost:*/*",
+    "https://*.up.railway.app/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.coupangeats.com/*",
+        "*://*.coupang.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "쿠팡이츠 라이더 모니터링"
+  },
+  "icons": {}
+}

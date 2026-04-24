@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { width: 320px; font-family: -apple-system, 'Malgun Gothic', sans-serif; padding: 16px; background: #f9fafb; }
+h2 { font-size: 15px; font-weight: 700; color: #C84B31; margin-bottom: 12px; }
+label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; font-weight: 600; }
+input { width: 100%; padding: 8px 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px; outline: none; margin-bottom: 10px; }
+input:focus { border-color: #C84B31; }
+.row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+.row label { margin-bottom: 0; flex-shrink: 0; }
+.row input { margin-bottom: 0; }
+button { width: 100%; padding: 10px; background: #C84B31; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+button:hover { background: #a33827; }
+.status { margin-top: 10px; padding: 8px; border-radius: 8px; font-size: 12px; text-align: center; }
+.status.ok { background: #fef3e6; color: #C84B31; }
+.status.err { background: #fff5f5; color: #e53e3e; }
+.status.idle { background: #f0f2f5; color: #888; }
+.info { font-size: 11px; color: #999; margin-top: 8px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<h2>🛵 쿠팡이츠 라이더 모니터링</h2>
+
+<label>모니터링 서버 URL</label>
+<input type="text" id="serverUrl" placeholder="http://localhost:3737">
+
+<div class="row">
+  <label>수집 간격 (초)</label>
+  <input type="number" id="interval" value="30" min="10" max="300" style="width:80px">
+</div>
+
+<button id="saveBtn">저장</button>
+
+<div class="status idle" id="status">설정을 저장해주세요</div>
+
+<div class="info">
+  쿠팡이츠 파트너 페이지를 열고 있으면<br>
+  자동으로 라이더 + 피크 데이터를 수집하여 서버로 전송합니다.
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
