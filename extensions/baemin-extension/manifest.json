@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "배민 라이더 모니터링",
+  "version": "1.0.0",
+  "description": "배민커넥트에서 라이더 데이터를 수집하여 모니터링 서버로 전송",
+  "permissions": ["storage", "alarms"],
+  "host_permissions": [
+    "*://*.baemin.com/*",
+    "*://*.woowahan.com/*",
+    "http://localhost:*/*",
+    "https://*.up.railway.app/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.baemin.com/*",
+        "*://*.woowahan.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "배민 라이더 모니터링"
+  },
+  "icons": {}
+}
