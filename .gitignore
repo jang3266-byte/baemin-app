@@ -1,3 +1,6 @@
 node_modules/
 *.txt
 rider-data.json
+.env
+.env.*
+!.env.example

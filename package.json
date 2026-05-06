@@ -12,8 +12,12 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
+    "adm-zip": "^0.5.17",
     "express": "^5.2.1",
     "node-fetch": "^2.7.0",
-    "ws": "^8.20.0"
+    "puppeteer-core": "^24.41.0",
+    "ws": "^8.20.0",
+    "xlsx": "^0.18.5"
   }
 }

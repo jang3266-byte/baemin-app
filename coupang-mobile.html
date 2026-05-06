@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<!-- 캐시 강제 무효화 (모바일에서 옛 버전 잡히지 않도록) -->
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="build" content="2026-04-27-mobile-textwrap-v2">
 <title>쿠팡이츠 모니터링</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -38,6 +43,25 @@
   }
   .refresh-btn:active { background: rgba(255,255,255,0.4); }
 
+  /* ── 지사 탭 (휘핏 / 덕송 — 초대형 터치 버튼) ── */
+  .branch-tabs { display: flex; gap: 14px; margin-top: 16px; }
+  .branch-tab {
+    flex: 1; min-height: 96px;
+    background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.9);
+    border: 2.5px solid rgba(255,255,255,0.28); border-radius: 22px;
+    padding: 0 22px; font-size: 32px; font-weight: 900;
+    letter-spacing: -0.02em;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+    transition: all 0.18s cubic-bezier(0.4,0,0.2,1);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .branch-tab:active { transform: scale(0.96); }
+  .branch-tab.active {
+    background: #fff; color: #C84B31;
+    border-color: #fff;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  }
+
   /* ── 인원 꽉 참 배너 ── */
   .cap-alert {
     display: none; background: #991b1b; color: #fff;
@@ -56,20 +80,22 @@
   }
   .tab-btn.active { color: #C84B31; border-bottom-color: #C84B31; }
 
-  /* ── 요약 카드 ── */
-  .summary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 14px 0; }
+  /* ── 요약 카드 (확대) ── */
+  .summary { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 14px 14px 0; }
   .sum-card {
-    background: #fff; border-radius: 12px; padding: 11px 14px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+    background: #fff; border-radius: 16px; padding: 18px 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.09);
+    min-height: 95px;
+    display: flex; flex-direction: column; justify-content: center;
   }
   .sum-card.full-width { grid-column: 1/-1; }
-  .sum-label { font-size: 11px; color: #888; font-weight: 500; margin-bottom: 3px; }
-  .sum-value { font-size: 26px; font-weight: 800; }
+  .sum-label { font-size: 14px; color: #666; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.01em; }
+  .sum-value { font-size: 38px; font-weight: 900; line-height: 1; letter-spacing: -0.02em; font-feature-settings: 'tnum'; }
   .sum-value.danger { color: #C84B31; }
-  .sum-value.warn   { color: #f97316; }
+  .sum-value.warn   { color: #ca8a04; }
   .sum-value.ok     { color: #22c55e; }
   .sum-value.blue   { color: #3b82f6; }
-  .sum-unit { font-size: 13px; font-weight: 500; color: #aaa; margin-left: 2px; }
+  .sum-unit { font-size: 16px; font-weight: 600; color: #aaa; margin-left: 3px; }
 
   /* ── 검색 & 필터 ── */
   .filter-wrap { padding: 10px 14px 0; display: flex; align-items: center; gap: 8px; }
@@ -104,34 +130,44 @@
   }
   .rider-card:active { transform: scale(0.98); }
   .rider-card.danger  { border-left-color: #C84B31; }
-  .rider-card.warn    { border-left-color: #f97316; }
+  .rider-card.warn    { border-left-color: #eab308; }
   .rider-card.ok      { border-left-color: #22c55e; }
   .rider-card.offline { border-left-color: #d1d5db; opacity: 0.75; }
 
-  .card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
+  .card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+  .card-top-left { flex: 1; min-width: 0; }
+  .card-top-right { display: flex; flex-direction: column; align-items: flex-end; line-height: 1; flex-shrink: 0; }
+  .card-top-right .rate-big { display: inline-flex; align-items: baseline; gap: 1px; }
+  .card-top-right .reject-rate-num { font-size: 28px; font-weight: 900; line-height: 1; letter-spacing: -0.02em; font-feature-settings: 'tnum'; }
+  .card-top-right .reject-rate-unit { font-size: 13px; color: #888; }
+  .card-top-right .reject-rate-label { font-size: 10px; color: #bbb; margin-top: 3px; font-weight: 600; letter-spacing: 0.02em; }
   .card-name { font-size: 16px; font-weight: 700; }
   .card-sub  { font-size: 11px; color: #aaa; margin-top: 2px; }
 
   .status-badge {
     font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 12px; white-space: nowrap;
   }
-  .status-배달중  { background: #dbeafe; color: #1d4ed8; }
-  .status-대기중  { background: #dcfce7; color: #15803d; }
+  .status-배달중  { background: #dcfce7; color: #15803d; }
+  .status-대기중  { background: #dbeafe; color: #1d4ed8; }
   .status-오프라인 { background: #f3f4f6; color: #6b7280; }
+  /* 이름 옆 inline status 라벨 (배달중/대기중/오프라인) */
+  .name-status {
+    display: inline-block;
+    font-size: 11px; font-weight: 700;
+    padding: 2px 8px; border-radius: 10px;
+    margin-left: 6px; vertical-align: middle;
+    letter-spacing: -0.02em;
+  }
 
-  /* 거절률 — 핵심! */
-  .reject-rate-row { display: flex; align-items: baseline; gap: 4px; margin-bottom: 4px; }
-  .reject-rate-num { font-size: 38px; font-weight: 900; line-height: 1; }
+  /* 거절률 색상 (.card-top-right 에서 사용) */
   .reject-rate-num.danger { color: #C84B31; }
-  .reject-rate-num.warn   { color: #f97316; }
+  .reject-rate-num.warn   { color: #ca8a04; }
   .reject-rate-num.ok     { color: #22c55e; }
-  .reject-rate-unit { font-size: 15px; color: #888; }
-  .reject-rate-label { font-size: 12px; color: #bbb; margin-left: 4px; }
 
   .rate-bar-bg { height: 5px; background: #f0f2f5; border-radius: 3px; margin-bottom: 10px; }
   .rate-bar    { height: 5px; border-radius: 3px; min-width: 3px; }
   .rate-bar.danger { background: #C84B31; }
-  .rate-bar.warn   { background: #f97316; }
+  .rate-bar.warn   { background: #eab308; }
   .rate-bar.ok     { background: #22c55e; }
 
   /* 완료/거절/취소 */
@@ -154,30 +190,63 @@
   /* ── 시간대별 탭 ── */
   .time-tab-content { padding: 10px 14px 100px; }
 
-  /* 피크타임별 현황 가로 스크롤 */
-  .peak-section-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px; }
-  .peak-section-scroll::-webkit-scrollbar { display: none; }
+  /* 피크타임별 현황 — 5칸 화면 폭 맞춤 (확대) */
+  .peak-section-scroll { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; padding: 0 8px 10px; margin-bottom: 16px; }
   .ps-card {
-    flex: 0 0 130px; background: #fff; border-radius: 12px; padding: 10px 10px 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
-    border-top: 3px solid #ccc;
+    min-width: 0; background: #fff; border-radius: 14px; padding: 18px 5px 18px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.09);
+    border-top: 5px solid #ccc;
+    text-align: center;
+    transition: transform 0.3s;
   }
-  .ps-name { font-size: 10px; font-weight: 700; margin-bottom: 4px; }
-  .ps-rate { font-size: 26px; font-weight: 900; line-height: 1; margin-bottom: 4px; }
-  .ps-bar-bg { height: 3px; background: #f0f0f0; border-radius: 2px; margin-bottom: 4px; }
-  .ps-bar    { height: 3px; border-radius: 2px; }
-  .ps-detail { font-size: 10px; color: #999; display: flex; justify-content: space-between; }
-  .ps-surplus { font-size: 10px; text-align: right; margin-top: 2px; font-weight: 600; }
+  /* 진행중 펄스 (깜빡임) — 100% 미달성 케이스만 */
+  @keyframes inProgPulseM {
+    0%, 100% { box-shadow: 0 0 0 2px rgba(34,197,94,0.30), 0 3px 12px rgba(34,197,94,0.20); }
+    50%       { box-shadow: 0 0 0 4px rgba(34,197,94,0.60), 0 6px 18px rgba(34,197,94,0.40); }
+  }
+  .ps-name {
+    font-size: 11px; font-weight: 800; margin-bottom: 8px;
+    line-height: 1.2;
+    letter-spacing: -0.04em;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    word-break: keep-all;
+    text-align: center;
+  }
+  @media (max-width: 430px) {
+    .ps-name { font-size: 10px; letter-spacing: -0.05em; }
+  }
+  @media (max-width: 360px) {
+    .ps-name { font-size: 9px; }
+  }
+  .ps-name > .ps-badge-inline {
+    display: inline-block; font-size: 9px; font-weight: 700;
+    padding: 1px 6px; border-radius: 5px; color: #fff;
+    line-height: 1.4; letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+  .ps-rate { font-size: 16px; font-weight: 700; line-height: 1; margin-bottom: 8px; color: #888; white-space: nowrap; overflow: hidden; }
+  .ps-bar-bg { height: 5px; background: #f0f0f0; border-radius: 3px; margin-bottom: 11px; }
+  .ps-bar    { height: 5px; border-radius: 3px; }
+  .ps-detail { font-size: 13px; color: #999; display: flex; justify-content: space-around; gap: 4px; margin-bottom: 11px; }
+  .ps-detail span { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .ps-detail .pd-val { font-size: 28px; font-weight: 900; color: #1a1a1a; line-height: 1; }
+  .ps-detail .pd-label { font-size: 12px; color: #888; font-weight: 700; }
+  .ps-remain { display: flex; justify-content: center; align-items: baseline; gap: 5px; }
+  .ps-remain-val { font-size: 26px; font-weight: 900; line-height: 1; }
+  .ps-remain-label { font-size: 11px; color: #bbb; font-weight: 700; }
 
-  /* 시간대 합계 카드 */
-  .time-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  /* 시간대 합계 카드 (확대) */
+  .time-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; padding: 0 10px; }
   .time-stat-card {
-    background: #fff; border-radius: 12px; padding: 10px 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
-    border-left: 3px solid #ccc;
+    background: #fff; border-radius: 16px; padding: 18px 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.09);
+    border-left: 6px solid #ccc;
+    min-height: 90px;
+    display: flex; flex-direction: column; justify-content: center;
   }
-  .ts-label { font-size: 11px; color: #888; margin-bottom: 2px; }
-  .ts-val   { font-size: 22px; font-weight: 800; }
+  .ts-label { font-size: 15px; font-weight: 700; color: #666; margin-bottom: 8px; letter-spacing: -0.01em; }
+  .ts-val   { font-size: 36px; font-weight: 900; color: #1a1a1a; line-height: 1; letter-spacing: -0.02em; font-feature-settings: 'tnum'; }
+  .ts-val .sum-unit { font-size: 16px; font-weight: 600; color: #888; margin-left: 3px; }
 
   /* 현재 시간대 / 전체 합계 */
   .cur-total-row { display: flex; gap: 8px; margin-bottom: 12px; }
@@ -257,12 +326,12 @@
     margin-bottom: 12px;
   }
   .modal-reject-box.danger { background: #fff1f0; }
-  .modal-reject-box.warn   { background: #fff8f0; }
+  .modal-reject-box.warn   { background: #fefce8; }
   .modal-reject-box.ok     { background: #f0fdf4; }
   .modal-reject-label { font-size: 13px; color: #888; font-weight: 500; }
   .modal-reject-val { font-size: 40px; font-weight: 900; line-height: 1; }
   .modal-reject-val.danger { color: #C84B31; }
-  .modal-reject-val.warn   { color: #f97316; }
+  .modal-reject-val.warn   { color: #ca8a04; }
   .modal-reject-val.ok     { color: #22c55e; }
 
   .modal-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
@@ -307,9 +376,135 @@
     display: flex; align-items: center; gap: 5px;
   }
   .sec-dot { width: 6px; height: 6px; border-radius: 50%; background: #C84B31; display: inline-block; }
+
+  /* ── 야간모드 (body.dark) ── */
+  body.dark { background: #0b1020; color: #e2e8f0; }
+  body.dark .header { background: #1e1b4b; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+  body.dark .branch-tab { background: rgba(0,0,0,0.25); border-color: rgba(255,255,255,0.18); color: rgba(255,255,255,0.75); }
+  body.dark .branch-tab.active { background: #312e81; color: #fff; border-color: #312e81; box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+  body.dark .cap-pill.full { background: #312e81; color: #fff; }
+  body.dark .tabs { background: #151b2e; border-bottom-color: rgba(255,255,255,0.06); }
+  body.dark .tab-btn { color: #6b7794; }
+  body.dark .tab-btn.active { color: #fb7185; border-bottom-color: #fb7185; }
+  body.dark .sec-title { color: #cbd5e1; }
+  body.dark .sum-card,
+  body.dark .ps-card,
+  body.dark .time-stat-card { background: #151b2e; box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
+  body.dark .sum-label,
+  body.dark .ts-label,
+  body.dark .ps-name { color: #a3b1c8; }
+  body.dark .sum-value { color: #e2e8f0; }
+  body.dark .sum-value.danger { color: #fb7185; }
+  body.dark .sum-value.warn   { color: #fbbf24; }
+  body.dark .sum-value.ok     { color: #4ade80; }
+  body.dark .sum-value.blue   { color: #60a5fa; }
+  body.dark .sum-unit { color: #6b7794; }
+  body.dark .ts-val { color: #e2e8f0; }
+  body.dark .ts-val .sum-unit { color: #6b7794; }
+  body.dark .ps-rate { color: #cbd5e1; }
+  body.dark .ps-bar-bg { background: rgba(255,255,255,0.06); }
+  body.dark .ps-detail { color: #6b7794; }
+  body.dark .ps-detail .pd-val { color: #e2e8f0; }
+  body.dark .ps-detail .pd-label { color: #6b7794; }
+  body.dark .ps-remain-label { color: #6b7794; }
+  body.dark .slot-section-title { color: #cbd5e1; }
+  body.dark .slot-group-header { border-bottom-color: rgba(255,255,255,0.08); }
+  body.dark .slot-group-unit { color: #6b7794; }
+  body.dark .ts-col.peak { background: rgba(251,146,60,0.12); border-color: #c2410c; }
+  body.dark .ts-col.peak .ts-time { color: #fb923c; }
+  body.dark .ts-col.current { background: rgba(200,75,49,0.18); border-color: #fb7185; }
+  body.dark .ts-col.current .ts-time { background: rgba(251,113,133,0.25); color: #fda4af; }
+  body.dark .ts-col.current .ts-bar { background: #fb7185; }
+  body.dark .ts-col.current .ts-accepted { color: #fda4af; }
+  body.dark .ts-now-label { background: rgba(251,113,133,0.25); color: #fda4af; }
+  body.dark .ts-time { color: #cbd5e1; background: rgba(255,255,255,0.04); }
+  body.dark .ts-bar-bg { background: rgba(255,255,255,0.06); }
+  body.dark .ts-bar { background: #475569; }
+  body.dark .ts-accepted { color: #e2e8f0; }
+  body.dark .ts-workers { color: #6b7794; }
+  body.dark .search-input { background: #151b2e; border-color: rgba(255,255,255,0.08); color: #e2e8f0; }
+  body.dark .search-input:focus { border-color: #fb7185; }
+  body.dark .filter-tab { background: #151b2e; border-color: rgba(255,255,255,0.08); color: #6b7794; }
+  body.dark .filter-tab.active { background: #C84B31; color: #fff; border-color: #C84B31; }
+  body.dark .rider-count { color: #6b7794; }
+  body.dark .rider-card { background: #151b2e; box-shadow: 0 1px 3px rgba(0,0,0,0.3); border-left-color: rgba(255,255,255,0.08); }
+  body.dark .rider-card.danger  { border-left-color: #fb7185; }
+  body.dark .rider-card.warn    { border-left-color: #fbbf24; }
+  body.dark .rider-card.ok      { border-left-color: #4ade80; }
+  body.dark .rider-card.offline { border-left-color: rgba(255,255,255,0.08); }
+  body.dark .card-name { color: #e2e8f0; }
+  body.dark .card-sub  { color: #6b7794; }
+  body.dark .status-배달중  { background: rgba(34,197,94,0.18); color: #86efac; }
+  body.dark .status-대기중  { background: rgba(59,130,246,0.18); color: #93c5fd; }
+  body.dark .status-오프라인 { background: rgba(255,255,255,0.06); color: #6b7794; }
+  body.dark .reject-rate-num.danger { color: #fb7185; }
+  body.dark .reject-rate-num.warn   { color: #fbbf24; }
+  body.dark .reject-rate-num.ok     { color: #4ade80; }
+  body.dark .reject-rate-unit { color: #6b7794; }
+  body.dark .reject-rate-label { color: #475569; }
+  body.dark .rate-bar-bg { background: rgba(255,255,255,0.06); }
+  body.dark .metrics { border-top-color: rgba(255,255,255,0.06); }
+  body.dark .metric-val { color: #e2e8f0; }
+  body.dark .metric-label { color: #6b7794; }
+  body.dark .peak-row { border-top-color: rgba(255,255,255,0.06); }
+  body.dark .peak-item-val { color: #e2e8f0; }
+  body.dark .peak-item-label { color: #6b7794; }
+  body.dark .empty { color: #6b7794; }
+  body.dark .modal { background: #151b2e; color: #e2e8f0; }
+  body.dark .modal-handle { background: rgba(255,255,255,0.18); }
+  body.dark .modal-status { color: #6b7794; }
+  body.dark .modal-reject-box.danger { background: rgba(239,68,68,0.12); }
+  body.dark .modal-reject-box.warn   { background: rgba(234,179,8,0.12); }
+  body.dark .modal-reject-box.ok     { background: rgba(34,197,94,0.12); }
+  body.dark .modal-reject-label { color: #6b7794; }
+  body.dark .modal-reject-val.danger { color: #fb7185; }
+  body.dark .modal-reject-val.warn   { color: #fbbf24; }
+  body.dark .modal-reject-val.ok     { color: #4ade80; }
+  body.dark .modal-stat { background: rgba(255,255,255,0.04); }
+  body.dark .modal-stat-label { color: #6b7794; }
+  body.dark .modal-stat-val { color: #e2e8f0; }
+  body.dark .modal-stat-val.red { color: #fb7185; }
+  body.dark .modal-stat-val.orange { color: #fb923c; }
+  body.dark .modal-peak-box { background: rgba(255,255,255,0.04); }
+  body.dark .modal-peak-title { color: #6b7794; }
+  body.dark .modal-peak-val { color: #e2e8f0; }
+  body.dark .modal-peak-label { color: #475569; }
+  body.dark .btn-copy { background: rgba(255,255,255,0.06); color: #e2e8f0; }
+  body.dark .btn-copy:active { background: rgba(255,255,255,0.12); }
+  body.dark .btn-copy.copied { background: #16a34a; color: #fff; }
+  body.dark .toast { background: #f1f5f9; color: #0f172a; }
+
+  .data-alert { display:none; background:#dc2626; color:#fff; padding:10px 16px; font-size:14px; font-weight:700; text-align:center; animation:alertFlash 1s infinite; }
+  .data-alert.show { display:block; }
+  @keyframes alertFlash { 0%,100%{opacity:1} 50%{opacity:.7} }
+
+  #error-banner {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    background: #e53e3e;
+    color: white;
+    text-align: center;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 700;
+    z-index: 9999;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  #error-banner.show { display: block; }
+  /* 화면 하단 빌드 마커 — 새로고침 후 새 버전 받았는지 즉시 확인용 */
+  .build-stamp {
+    position: fixed; bottom: 4px; right: 6px;
+    font-size: 9px; color: rgba(0,0,0,0.25); z-index: 999;
+    pointer-events: none; user-select: none;
+    font-family: monospace;
+  }
+  body.dark .build-stamp { color: rgba(255,255,255,0.30); }
 </style>
 </head>
 <body>
+<div id="error-banner">⚠️ 데이터 수집 실패 - 서버 연결을 확인하세요</div>
+<div class="build-stamp">v2026-04-27-mobile-textwrap-v2</div>
 
 <!-- 헤더 -->
 <div class="header">
@@ -322,75 +517,73 @@
   </div>
   <div class="header-row2">
     <span id="lastUpdate">업데이트 중...</span>
-    <span class="countdown-badge" id="countdown">30s</span>
-    <button class="refresh-btn" onclick="loadData()">↻ 새로고침</button>
+    <span id="freshBadge" style="display:none;border-radius:20px;padding:2px 8px;font-weight:800;font-size:11px"></span>
+    <span class="countdown-badge" id="countdown">5s</span>
+    <button class="refresh-btn" onclick="forceRefresh()">↻ 새로고침</button>
+    <button class="refresh-btn" id="darkToggle" onclick="toggleDark()" style="font-size:14px">🌙</button>
+  </div>
+  <div class="branch-tabs" id="branchTabs">
+    <!-- populated by loadBranches() -->
   </div>
 </div>
 
 <!-- 인원 꽉 참 배너 -->
 <div class="cap-alert" id="capAlert">🔴 인원 꽉 참! 슬롯 <span id="capAlertText"></span></div>
+<div class="data-alert" id="dataAlert">⚠️ 데이터 수집 실패 - 서버 연결을 확인하세요</div>
 
-<!-- 탭 -->
-<div class="tabs">
-  <button class="tab-btn active" id="tabRidersBtn" onclick="showTab('riders')">라이더 현황</button>
-  <button class="tab-btn" id="tabTimeBtn" onclick="showTab('time')">시간대별 주문</button>
+<!-- ── 요약 ── -->
+<div class="summary">
+  <div class="sum-card"><div class="sum-label">온라인</div><div class="sum-value ok" id="sumOnline">-<span class="sum-unit">명</span></div></div>
+  <div class="sum-card"><div class="sum-label">완료</div><div class="sum-value" id="sumCompleted">-<span class="sum-unit">건</span></div></div>
+  <div class="sum-card"><div class="sum-label">거절/무시</div><div class="sum-value" id="sumRejected">-<span class="sum-unit">건</span></div></div>
+  <div class="sum-card"><div class="sum-label">취소</div><div class="sum-value" id="sumCancelled">-<span class="sum-unit">건</span></div></div>
+  <div class="sum-card"><div class="sum-label">전체 거절률</div><div class="sum-value" id="sumRejectRate">-<span class="sum-unit">%</span></div></div>
+  <div class="sum-card"><div class="sum-label">오늘 달성률</div><div class="sum-value" id="sumDailyRate">-<span class="sum-unit">%</span></div></div>
+  <div class="sum-card"><div class="sum-label">수락전 취소</div><div class="sum-value" id="sumPreCancel">-<span class="sum-unit">건</span></div></div>
+  <div class="sum-card"><div class="sum-label">수락후 취소</div><div class="sum-value" id="sumPostCancel">-<span class="sum-unit">건</span></div></div>
 </div>
 
-<!-- ── 라이더 탭 ── -->
-<div id="tabRiders">
-  <div class="summary">
-    <div class="sum-card"><div class="sum-label">온라인</div><div class="sum-value blue" id="sumOnline">-<span class="sum-unit">명</span></div></div>
-    <div class="sum-card"><div class="sum-label">완료</div><div class="sum-value ok" id="sumCompleted">-<span class="sum-unit">건</span></div></div>
-    <div class="sum-card"><div class="sum-label">거절/무시</div><div class="sum-value" id="sumRejected">-<span class="sum-unit">건</span></div></div>
-    <div class="sum-card"><div class="sum-label">취소</div><div class="sum-value" id="sumCancelled">-<span class="sum-unit">건</span></div></div>
-    <div class="sum-card"><div class="sum-label">전체 거절률</div><div class="sum-value" id="sumRejectRate">-<span class="sum-unit">%</span></div></div>
-    <div class="sum-card"><div class="sum-label">오늘 달성률</div><div class="sum-value" id="sumDailyRate">-<span class="sum-unit">%</span></div></div>
-    <div class="sum-card"><div class="sum-label">수락전 취소</div><div class="sum-value" id="sumPreCancel">-<span class="sum-unit">건</span></div></div>
-    <div class="sum-card"><div class="sum-label">수락후 취소</div><div class="sum-value" id="sumPostCancel">-<span class="sum-unit">건</span></div></div>
-  </div>
-
-  <div class="filter-wrap">
-    <input class="search-input" type="text" id="searchInput" placeholder="🔍 이름 검색..." oninput="renderRiders()">
-  </div>
-  <div class="filter-tab-wrap">
-    <button class="filter-tab active" id="fAll"     onclick="setFilter('all')">전체</button>
-    <button class="filter-tab" id="fOnline"  onclick="setFilter('online')">🟢 운행중</button>
-    <button class="filter-tab" id="fDanger"  onclick="setFilter('danger')">🔴 위험</button>
-  </div>
-  <div class="rider-count" id="riderCount"></div>
-
-  <div class="list" id="riderList">
-    <div class="empty"><div class="empty-icon">🛵</div><div>데이터를 불러오는 중입니다…</div></div>
-  </div>
+<!-- ── 피크타임별 현황 ── -->
+<div style="padding:0 14px">
+  <div class="sec-title"><span class="sec-dot"></span> 피크타임별 현황</div>
+</div>
+<div class="peak-section-scroll" id="peakSectionCards">
+  <div style="color:#bbb;font-size:13px;padding:20px">데이터 수집 중...</div>
 </div>
 
-<!-- ── 시간대별 탭 ── -->
-<div id="tabTime" style="display:none">
-  <div class="time-tab-content">
+<!-- ── 시간대별 수락 주문 ── -->
+<div style="padding:0 14px">
+  <div class="sec-title"><span class="sec-dot"></span> 시간대별 수락 주문</div>
+</div>
+<div class="time-stat-grid">
+  <div class="time-stat-card"><div class="ts-label">🌅 아침</div><div class="ts-val" id="statMorning">-<span class="sum-unit">건</span></div></div>
+  <div class="time-stat-card"><div class="ts-label">⚡ 점심피크</div><div class="ts-val" id="statLunchPeak">-<span class="sum-unit">건</span></div></div>
+  <div class="time-stat-card"><div class="ts-label">🕑 점심논피크</div><div class="ts-val" id="statNonPeak">-<span class="sum-unit">건</span></div></div>
+  <div class="time-stat-card"><div class="ts-label">🌆 저녁피크 <span style="font-size:10px;opacity:.7">16:55~20:00</span></div><div class="ts-val" id="statDinnerPeak">-<span class="sum-unit">건</span></div></div>
+  <div class="time-stat-card"><div class="ts-label">🌙 저녁논피크</div><div class="ts-val" id="statNight">-<span class="sum-unit">건</span></div></div>
+</div>
 
-    <div class="sec-title"><span class="sec-dot"></span> 피크타임별 현황</div>
-    <div class="peak-section-scroll" id="peakSectionCards">
-      <div style="color:#bbb;font-size:13px;padding:20px">데이터 수집 중...</div>
-    </div>
+<div class="cur-total-row">
+  <div class="sum-card"><div class="sum-label">▶ 현재 시간대</div><div class="sum-value" style="color:#C84B31" id="statCurrent">-</div></div>
+  <div class="sum-card"><div class="sum-label">📦 오늘 전체</div><div class="sum-value blue" id="statTotal">-<span class="sum-unit">건</span></div></div>
+</div>
 
-    <div class="sec-title"><span class="sec-dot"></span> 시간대별 수락 주문</div>
-    <div class="time-stat-grid">
-      <div class="time-stat-card" style="border-left-color:#6b7280"><div class="ts-label">🌅 아침</div><div class="ts-val" style="color:#6b7280" id="statMorning">-<span class="sum-unit">건</span></div></div>
-      <div class="time-stat-card" style="border-left-color:#ea580c"><div class="ts-label">⚡ 점심피크</div><div class="ts-val" style="color:#ea580c" id="statLunchPeak">-<span class="sum-unit">건</span></div></div>
-      <div class="time-stat-card" style="border-left-color:#3b82f6"><div class="ts-label">🕑 점심논피크</div><div class="ts-val" style="color:#3b82f6" id="statNonPeak">-<span class="sum-unit">건</span></div></div>
-      <div class="time-stat-card" style="border-left-color:#C84B31"><div class="ts-label">🌆 저녁피크</div><div class="ts-val" style="color:#C84B31" id="statDinnerPeak">-<span class="sum-unit">건</span></div></div>
-      <div class="time-stat-card" style="border-left-color:#7c3aed"><div class="ts-label">🌙 저녁논피크</div><div class="ts-val" style="color:#7c3aed" id="statNight">-<span class="sum-unit">건</span></div></div>
-    </div>
+<!-- ── 라이더 현황 ── -->
+<div style="padding:0 14px">
+  <div class="sec-title"><span class="sec-dot"></span> 라이더 현황</div>
+</div>
+<div class="filter-wrap">
+  <input class="search-input" type="text" id="searchInput" placeholder="🔍 이름 검색..." oninput="renderRiders()">
+</div>
+<div class="filter-tab-wrap">
+  <button class="filter-tab active" id="fAll"     onclick="setFilter('all')">전체</button>
+  <button class="filter-tab" id="fOnline"  onclick="setFilter('online')">🟢 운행중</button>
+  <button class="filter-tab" id="fDanger"  onclick="setFilter('danger')">🔴 위험</button>
+</div>
+<div class="rider-count" id="riderCount"></div>
 
-    <div class="cur-total-row">
-      <div class="sum-card"><div class="sum-label">▶ 현재 시간대</div><div class="sum-value" style="color:#C84B31" id="statCurrent">-</div></div>
-      <div class="sum-card"><div class="sum-label">📦 오늘 전체</div><div class="sum-value blue" id="statTotal">-<span class="sum-unit">건</span></div></div>
-    </div>
-
-    <div id="timeslotGroups">
-      <div class="empty"><div class="empty-icon">📊</div><div>시간대 데이터 수집 중...</div></div>
-    </div>
-  </div>
+<div class="list" id="riderList">
+  <div class="empty"><div class="empty-icon">🛵</div><div>데이터를 불러오는 중입니다…</div></div>
 </div>
 
 <!-- 라이더 상세 모달 -->
@@ -433,19 +626,53 @@
 <script>
 // ── State ───────────────────────────────────────────────
 let riderState = null, peakState = null;
+// 지사(branch) 상태 — 탭 버튼 2개 (본사/덕송) 로 큰 터치 영역 제공
+let currentBranch = new URLSearchParams(location.search).get('branch') || localStorage.getItem('coupang_branch') || '휘핏';
+function selectBranch(b) {
+  if (b === currentBranch) return;
+  currentBranch = b;
+  localStorage.setItem('coupang_branch', currentBranch);
+  renderBranchTabs();
+  loadData();
+}
+function renderBranchTabs(list) {
+  const tabs = document.getElementById('branchTabs');
+  if (!tabs) return;
+  const branches = list || window._branches || ['휘핏'];
+  tabs.innerHTML = branches.map(b => `<button class="branch-tab${b===currentBranch?' active':''}" onclick="selectBranch('${b}')">${b}</button>`).join('');
+}
+async function loadBranches() {
+  try {
+    const r = await fetch('/api/branches').then(r => r.json());
+    window._branches = r.branches || ['휘핏'];
+    renderBranchTabs();
+  } catch(e) {}
+}
+loadBranches();
+let lastSuccessTs = Date.now();
+setInterval(() => { if (Date.now() - lastSuccessTs > 120000) document.getElementById('dataAlert').classList.add('show'); }, 30000);
 let filterMode = 'all';
+
+let lastSuccessTime = Date.now();
+function showErrorBanner() {
+  document.getElementById('error-banner').classList.add('show');
+}
+function hideErrorBanner() {
+  document.getElementById('error-banner').classList.remove('show');
+  lastSuccessTime = Date.now();
+}
+// Check every 30 seconds if last success was >2 minutes ago
+setInterval(() => {
+  if (Date.now() - lastSuccessTime > 2 * 60 * 1000) {
+    showErrorBanner();
+  }
+}, 30000);
 let selectedRider = null;
-let countdownVal = 30;
+let countdownVal = 60;
 let countdownTimer = null;
 let prevCapFull = false;
 
-// ── 탭 전환 ──────────────────────────────────────────
-function showTab(tab) {
-  document.getElementById('tabRiders').style.display = tab === 'riders' ? '' : 'none';
-  document.getElementById('tabTime').style.display   = tab === 'time'   ? '' : 'none';
-  document.getElementById('tabRidersBtn').classList.toggle('active', tab === 'riders');
-  document.getElementById('tabTimeBtn').classList.toggle('active', tab === 'time');
-}
+// ── 탭 전환 (미사용 — 단일 페이지) ──────────────────
 
 // ── 필터 ────────────────────────────────────────────
 function setFilter(mode) {
@@ -457,9 +684,10 @@ function setFilter(mode) {
 }
 
 // ── 거절률 색상 ─────────────────────────────────────
+// 쿠팡: 10%+ 위험(빨강) / 8~10% 주의(주황) / 8% 미만 양호(초록)
 function rateClass(r) {
   if (r >= 10) return 'danger';
-  if (r >= 3)  return 'warn';
+  if (r >= 8)  return 'warn';
   return 'ok';
 }
 
@@ -471,6 +699,23 @@ function timeAgo(ts) {
   if (sec < 3600) return Math.floor(sec/60) + '분 전';
   return Math.floor(sec/3600) + '시간 전';
 }
+
+// 최근 수신 시각 배지: 초록(3분내)/노랑(5분내)/주황(10분내)/빨강(10분+)
+function updateFreshBadge() {
+  const ts = (riderState && riderState.ts) || 0;
+  const badge = document.getElementById('freshBadge');
+  const lastU = document.getElementById('lastUpdate');
+  if (!badge) return;
+  if (!ts) { badge.style.display = 'none'; return; }
+  const ageMin = (Date.now() - ts) / 60000;
+  badge.style.display = 'inline-block';
+  if (lastU) lastU.textContent = timeAgo(ts) + ' 수신';
+  if (ageMin < 3)      { badge.textContent = '✅';                 badge.style.background = '#22c55e'; badge.style.color = '#fff'; }
+  else if (ageMin < 5) { badge.textContent = '🟡 ' + Math.floor(ageMin) + '분'; badge.style.background = '#fbbf24'; badge.style.color = '#000'; }
+  else if (ageMin < 10){ badge.textContent = '🟠 ' + Math.floor(ageMin) + '분'; badge.style.background = '#f97316'; badge.style.color = '#fff'; }
+  else                 { badge.textContent = '🚨 ' + Math.floor(ageMin) + '분 끊김'; badge.style.background = '#ef4444'; badge.style.color = '#fff'; }
+}
+setInterval(updateFreshBadge, 10000);
 
 function fmt(n) {
   return Number.isInteger(n) ? n : parseFloat(Number(n).toFixed(1));
@@ -514,27 +759,27 @@ function renderRiders() {
   const maxRate = Math.max(...riders.map(r => r.rejectRate), 10);
 
   list.innerHTML = riders.map(r => {
-    const cls = r.status === '오프라인' ? 'offline' : rateClass(r.rejectRate);
+    // 좌측 띠: 운행중이면 녹색(ok), 오프라인이면 회색 — 거절률 위험은 숫자 텍스트 색으로 표시
+    const cls = r.status === '오프라인' ? 'offline' : 'ok';
     const ratCls = rateClass(r.rejectRate);
     const barW = Math.min(r.rejectRate / maxRate * 100, 100).toFixed(1);
     const rankStr = r.rank ? `#${r.rank} 슬롯` : '오프라인';
     const l = r.lunchPeak  > 0 ? r.lunchPeak  : '-';
     const d = r.dinnerPeak > 0 ? r.dinnerPeak : '-';
     const n = r.nonPeak    > 0 ? r.nonPeak    : '-';
+    // 쿠팡 status: 배달중 → "운행중" 라벨로 표시 (사용자 친화적)
+    const statusLabel = r.status === '배달중' ? '운행중' : (r.status || '-');
     return `
     <div class="rider-card ${cls}" onclick="openModal(${JSON.stringify(r).replace(/"/g,'&quot;')})">
       <div class="card-top">
-        <div>
-          <div class="card-name">${r.name}</div>
+        <div class="card-top-left">
+          <div class="card-name">${r.name} <span class="name-status status-${r.status}">${statusLabel}</span></div>
           <div class="card-sub">${rankStr}${r.phone ? ' · ' + r.phone : ''}</div>
         </div>
-        <span class="status-badge status-${r.status}">${r.status}</span>
-      </div>
-
-      <div class="reject-rate-row">
-        <span class="reject-rate-num ${ratCls}">${fmt(r.rejectRate)}</span>
-        <span class="reject-rate-unit">%</span>
-        <span class="reject-rate-label">거절률</span>
+        <div class="card-top-right">
+          <div class="rate-big"><span class="reject-rate-num ${ratCls}">${fmt(r.rejectRate)}</span><span class="reject-rate-unit">%</span></div>
+          <div class="reject-rate-label">거절률</div>
+        </div>
       </div>
       <div class="rate-bar-bg">
         <div class="rate-bar ${ratCls}" style="width:${barW}%"></div>
@@ -564,20 +809,23 @@ function renderRiders() {
   }).join('');
 }
 
-// ── 시간대 그룹핑 ────────────────────────────────────
+// ── 시간대 그룹핑 (시간 + 요일/휴일 기반) ────────────────────────
+//   운영 기준 — 사이트 isPeak는 휴일 인식 못 하므로 클라이언트에서 처리
+//   평일: 점심피크 11:00~13:00, 주말·휴일: 점심피크 11:00~14:00
+//   저녁피크: 16:55~20:00 (요일 무관)
 function groupTimeSlots(slots) {
-  const valid = slots.filter(s => {
-    const m = s.time.match(/(\d{1,2}):(\d{2})/);
-    return m !== null;
-  });
-  let pgIdx = 0, prevPeak = false;
-  const tagged = valid.map(s => {
-    if (s.isPeak && !prevPeak) pgIdx++;
-    prevPeak = s.isPeak;
-    return { ...s, _pg: s.isPeak ? pgIdx : 0 };
-  });
-  const fp1 = tagged.findIndex(s => s._pg === 1);
-  const fp2 = tagged.findIndex(s => s._pg === 2);
+  const valid = slots.filter(s => /\d{1,2}:\d{2}/.test(s.time || ''));
+  const slotHourLocal = t => {
+    const m = (t || '').match(/(\d{1,2}):(\d{2})/);
+    return m ? parseInt(m[1]) + parseInt(m[2]) / 60 : -1;
+  };
+  const _HOLIDAYS = ['2026-01-01','2026-02-16','2026-02-17','2026-02-18','2026-03-01','2026-04-29','2026-05-01','2026-05-05','2026-05-24','2026-06-06','2026-08-15','2026-09-24','2026-09-25','2026-09-26','2026-10-03','2026-10-09','2026-12-25'];
+  const _todayKST = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).slice(0,10);
+  const _isHoliday = _HOLIDAYS.indexOf(_todayKST) >= 0;
+  const day = new Date().getDay(); // 0=일, 6=토
+  const isWeekend = day === 0 || day === 6;
+  const lunchPeakEnd = (isWeekend || _isHoliday) ? 14 : 13; // 주말·휴일은 14시까지
+
   const groups = [
     { key:'morning',    label:'아침',      emoji:'🌅', color:'#6b7280', slots:[] },
     { key:'lunchPeak',  label:'점심피크',  emoji:'⚡', color:'#ea580c', slots:[] },
@@ -587,12 +835,14 @@ function groupTimeSlots(slots) {
   ];
   const G = {};
   groups.forEach(g => G[g.key] = g.slots);
-  tagged.forEach((s, i) => {
-    if      (s._pg === 1) G.lunchPeak.push(s);
-    else if (s._pg === 2) G.dinnerPeak.push(s);
-    else if (fp1 === -1 || i < fp1) G.morning.push(s);
-    else if (fp2 === -1 || i < fp2) G.nonPeak.push(s);
-    else G.night.push(s);
+  valid.forEach(s => {
+    const h = slotHourLocal(s.time);
+    if (h < 0)              return;
+    else if (h < 11)        G.morning.push(s);
+    else if (h < lunchPeakEnd) G.lunchPeak.push(s);
+    else if (h < 16 + 55/60) G.nonPeak.push(s);
+    else if (h < 20)        G.dinnerPeak.push(s);
+    else                    G.night.push(s);
   });
   return groups;
 }
@@ -607,16 +857,57 @@ function renderTimeSlots() {
   const maxAcc = Math.max(...slots.map(s => s.accepted), 1);
 
   const groups = groupTimeSlots(slots);
-  const gTotals = {};
+
+  // ── 시간대별 수락 주문: isPeak 플래그 기준 그룹 합산 (쿠팡 페이지와 100% 일치) ──
+  //   groupTimeSlots() 가 isPeak 연속 구간을 _pg=1(점심피크), _pg=2(저녁피크)로 태깅
+  const gTotals = { morning:0, lunchPeak:0, nonPeak:0, dinnerPeak:0, night:0 };
   groups.forEach(g => { gTotals[g.key] = g.slots.reduce((s, c) => s + (c.accepted||0), 0); });
   const total = Object.values(gTotals).reduce((a,b) => a+b, 0);
+  const fmtAcc = v => fmt(Math.round(v * 10) / 10);
 
-  document.getElementById('statMorning').innerHTML    = `${fmt(gTotals.morning   ||0)}<span class="sum-unit">건</span>`;
-  document.getElementById('statLunchPeak').innerHTML  = `${fmt(gTotals.lunchPeak ||0)}<span class="sum-unit">건</span>`;
-  document.getElementById('statNonPeak').innerHTML    = `${fmt(gTotals.nonPeak   ||0)}<span class="sum-unit">건</span>`;
-  document.getElementById('statDinnerPeak').innerHTML = `${fmt(gTotals.dinnerPeak||0)}<span class="sum-unit">건</span>`;
-  document.getElementById('statNight').innerHTML      = `${fmt(gTotals.night     ||0)}<span class="sum-unit">건</span>`;
-  document.getElementById('statTotal').innerHTML      = `${fmt(total)}<span class="sum-unit">건</span>`;
+  document.getElementById('statMorning').innerHTML    = `${fmtAcc(gTotals.morning)}<span class="sum-unit">건</span>`;
+  document.getElementById('statLunchPeak').innerHTML  = `${fmtAcc(gTotals.lunchPeak)}<span class="sum-unit">건</span>`;
+  document.getElementById('statNonPeak').innerHTML    = `${fmtAcc(gTotals.nonPeak)}<span class="sum-unit">건</span>`;
+  document.getElementById('statDinnerPeak').innerHTML = `${fmtAcc(gTotals.dinnerPeak)}<span class="sum-unit">건</span>`;
+  document.getElementById('statNight').innerHTML      = `${fmtAcc(gTotals.night)}<span class="sum-unit">건</span>`;
+  document.getElementById('statTotal').innerHTML      = `${fmtAcc(total)}<span class="sum-unit">건</span>`;
+
+  // 시간대별 수락 주문 카드 — 값 색상 + 좌측 띠(border-left) 색상을 피크타임 상태와 동기화
+  // (완료=주황, 진행중=녹색, 미달=빨강, 대기=기본)
+  // 다크모드 CSS body.dark .ts-val { color: !important } 이기기 위해 setProperty + important 사용
+  const statPsMap = { statMorning:'아침', statLunchPeak:'점심 피크', statNonPeak:'점심 논피크', statDinnerPeak:'저녁 피크', statNight:'저녁 논피크' };
+  for (const [sid, pname] of Object.entries(statPsMap)) {
+    const ps = (peakState.peakSections || []).find(p => p.name === pname);
+    const el = document.getElementById(sid);
+    if (!el) continue;
+    const card = el.parentElement; // .time-stat-card
+    if (!ps) {
+      el.style.removeProperty('color');
+      if (card) card.style.removeProperty('border-left-color');
+      continue;
+    }
+    // inProgress 최우선: 진행중이면 무조건 녹색
+    const _ok = (ps.rate || 0) >= 100 || ((ps.target || 0) > 0 && (ps.completed || 0) >= ps.target);
+    const _notStarted = !ps.inProgress && (ps.completed || 0) === 0 && (ps.rate || 0) === 0;
+    const _inProg  = !!ps.inProgress;
+    const _completed = !ps.inProgress && _ok;
+    const _failed = !ps.inProgress && !_ok && !_notStarted;
+    if (_notStarted) {
+      el.style.removeProperty('color');
+      if (card) card.style.removeProperty('border-left-color');
+    } else {
+      // 진행중 + 100% 달성 = 골드 (#d97706/#f59e0b)
+      const _achievedNow = _inProg && _ok;
+      const c = _achievedNow ? '#d97706'
+              : _inProg ? '#22c55e'
+              : _failed ? '#ef4444'
+              : _completed ? '#f59e0b'
+              : '#22c55e';
+      const borderC = _achievedNow ? '#f59e0b' : c;
+      el.style.setProperty('color', c, 'important');
+      if (card) card.style.setProperty('border-left-color', borderC, 'important');
+    }
+  }
 
   const curVal  = currentIdx >= 0 ? slots[currentIdx].accepted : 0;
   const curTime = currentIdx >= 0 ? slots[currentIdx].time : '-';
@@ -632,65 +923,84 @@ function renderTimeSlots() {
       const color = colors[i] || '#888';
       const emoji = emojis[i] || '•';
       const pct   = Math.min(ps.rate || 0, 100);
-      const surplus = ps.completed > ps.target
-        ? `<span style="color:#22c55e">+${fmt(ps.completed - ps.target)}</span>`
-        : ps.remaining > 0 ? `<span style="color:#f59e0b">잔여 ${fmt(ps.remaining)}</span>`
-        : `<span style="color:#ccc">-</span>`;
-      const badge = ps.inProgress
-        ? `<span style="background:#fef3c7;color:#b45309;font-size:9px;padding:1px 5px;border-radius:6px">진행중</span>`
-        : ps.rate >= 100 ? `<span style="color:#22c55e">✓</span>` : '';
-      return `
-      <div class="ps-card" style="border-top-color:${color}">
-        <div class="ps-name" style="color:${color}">${emoji} ${ps.name} ${badge}</div>
-        <div class="ps-rate" style="color:${color}">${fmt(ps.rate)}<span style="font-size:13px">%</span></div>
-        <div class="ps-bar-bg"><div class="ps-bar" style="background:${color};width:${pct}%"></div></div>
-        <div class="ps-detail"><span>목표 ${ps.target}</span><span>완료 ${fmt(ps.completed)}</span></div>
-        <div class="ps-surplus">${surplus}</div>
+      const remaining = ps.completed >= ps.target
+        ? ps.completed - ps.target
+        : ps.remaining ?? (ps.target - ps.completed);
+      const remainLabel = ps.completed >= ps.target ? '초과' : '잔여';
+      // inProgress 최우선: 진행중이면 무조건 녹색
+      const isSuccess  = (ps.rate || 0) >= 100 || ((ps.target || 0) > 0 && (ps.completed || 0) >= ps.target);
+      const notStarted = !ps.inProgress && (ps.completed || 0) === 0 && (ps.rate || 0) === 0;
+      const inProg     = !!ps.inProgress;
+      const completed  = !ps.inProgress && isSuccess;
+      const failed     = !ps.inProgress && !isSuccess && !notStarted;
+      // 진행중 + 100% 달성 — 골드 강조
+      const achievedNow = inProg && isSuccess;
+      const remainColor = achievedNow ? '#d97706'
+                        : inProg ? '#22c55e'
+                        : completed ? '#f59e0b'
+                        : failed ? '#ef4444'
+                        : '#9ca3af';
+      const remainDisplay = ps.completed >= ps.target ? `+${fmt(remaining)}` : remaining > 0 ? fmt(remaining) : '-';
+      const badge = notStarted
+        ? ''
+        : achievedNow
+          ? `<span style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-size:10px;padding:2px 7px;border-radius:6px;font-weight:800;box-shadow:0 2px 8px rgba(245,158,11,0.5);white-space:nowrap;letter-spacing:-0.02em">🏆 달성!</span>`
+          : inProg
+            ? `<span style="background:#22c55e;color:#fff;font-size:10px;padding:2px 7px;border-radius:6px;font-weight:700;white-space:nowrap;letter-spacing:-0.02em">진행중</span>`
+            : failed
+              ? `<span style="background:#ef4444;color:#fff;font-size:10px;padding:2px 7px;border-radius:6px;font-weight:700;white-space:nowrap;letter-spacing:-0.02em">미달</span>`
+              : completed
+                ? `<span style="background:#f59e0b;color:#fff;font-size:10px;padding:2px 7px;border-radius:6px;font-weight:700;white-space:nowrap;letter-spacing:-0.02em">완료 ✓</span>`
+                : '';
+      const cardStyle = notStarted
+        ? 'border-top-color:#e5e7eb;opacity:0.5'
+        : achievedNow
+          ? 'border-top-color:#f59e0b;border-top-width:6px;background:linear-gradient(135deg,rgba(245,158,11,0.22) 0%,rgba(245,158,11,0.08) 100%);box-shadow:0 0 0 3px rgba(245,158,11,0.55),0 6px 18px rgba(245,158,11,0.35);transform:scale(1.03)'
+          : inProg
+            ? 'border-top-color:#22c55e;border-top-width:4px;background:rgba(34,197,94,0.08);animation:inProgPulseM 1.6s ease-in-out infinite'
+            : failed
+              ? 'border-top-color:#ef4444;border-top-width:4px;background:rgba(239,68,68,0.08);box-shadow:0 0 0 2px rgba(239,68,68,0.25)'
+              : completed
+                ? 'border-top-color:#f59e0b'
+                : '';
+      const barColor = notStarted ? '#e5e7eb' : achievedNow ? '#f59e0b' : inProg ? '#22c55e' : failed ? '#ef4444' : '#f59e0b';
+      const rateStyle = achievedNow
+        ? 'color:#d97706;font-size:22px;font-weight:900'
+        : 'color:#1a1a1a';
+      return `<div class="ps-card" style="${cardStyle}">
+        <div class="ps-name" style="color:#555">${emoji} ${ps.name} ${badge}</div>
+        <div class="ps-rate" style="${rateStyle}">${fmt(ps.rate)}<span style="font-size:13px">%</span></div>
+        <div class="ps-bar-bg"><div class="ps-bar" style="background:${barColor} !important;width:${pct}%"></div></div>
+        <div class="ps-detail">
+          <span><span class="pd-val">${ps.target}</span><span class="pd-label">목표</span></span>
+          <span><span class="pd-val">${fmt(ps.completed)}</span><span class="pd-label">완료</span></span>
+        </div>
+        <div class="ps-remain">
+          <span class="ps-remain-val" style="color:${remainColor}">${remainDisplay}</span>
+          <span class="ps-remain-label">${remainLabel}</span>
+        </div>
       </div>`;
     }).join('');
   }
 
-  // 시간대 그룹 바 차트
-  const groupEl = document.getElementById('timeslotGroups');
-  groupEl.innerHTML = groups.map(g => {
-    const groupTotal = gTotals[g.key] || 0;
-    const slotsHtml = g.slots.length
-      ? g.slots.map(s => {
-          const origIdx = slots.indexOf(s);
-          const isCur = origIdx === currentIdx;
-          const isEmpty = s.accepted === 0 && s.workers === 0;
-          const barH = isEmpty ? 0 : Math.max(3, Math.round(s.accepted / maxAcc * 60));
-          return `
-          <div class="ts-col ${s.isPeak?'peak':''} ${isCur?'current':''} ${isEmpty?'empty':''}">
-            <div class="ts-time">${s.isPeak?'⚡':''}${s.time}</div>
-            <div class="ts-bar-wrap">
-              ${isCur ? '<div class="ts-now-label">▶ 현재</div>' : ''}
-              <div class="ts-bar-bg"><div class="ts-bar" style="height:${barH}px"></div></div>
-              <div class="ts-accepted">${isEmpty ? '-' : s.accepted}</div>
-              <div class="ts-workers">👤${isEmpty ? '-' : s.workers}</div>
-            </div>
-          </div>`;
-        }).join('')
-      : '<div style="color:#ccc;font-size:12px;padding:8px">데이터 없음</div>';
-
-    return `
-    <div class="slot-group">
-      <div class="slot-group-header">
-        <span class="slot-group-name" style="color:${g.color}">${g.emoji} ${g.label}</span>
-        <span class="slot-group-total" style="color:${g.color}">${fmt(groupTotal)}</span>
-        <span class="slot-group-unit">건 (${g.slots.length}구간)</span>
-      </div>
-      <div class="slots-row">${slotsHtml}</div>
-    </div>`;
-  }).join('');
 }
 
 // ── 데이터 로드 ──────────────────────────────────────
+// 진짜 새로고침: 확장에게 "지금 스크래핑해" 요청 → 잠시 대기 → 데이터 재로드
+async function forceRefresh() {
+  try {
+    await fetch('/api/request-refresh', { method: 'POST', cache: 'no-store' }).catch(() => {});
+    // 0.8초 대기 후 첫 loadData (확장 push 완료 시각). 구 데이터 표시 X
+    [800, 1500, 3000, 5000].forEach(d => setTimeout(() => loadData(), d));
+  } catch(e) {}
+}
+
 async function loadData() {
   try {
+    const cb = '&_=' + Date.now();
     const [rRes, pRes] = await Promise.all([
-      fetch('/api/coupang/riders').then(r => r.json()).catch(() => null),
-      fetch('/api/coupang/peak').then(r => r.json()).catch(() => null),
+      fetch('/api/coupang/riders?branch=' + encodeURIComponent(currentBranch) + cb, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
+      fetch('/api/coupang/peak?branch=' + encodeURIComponent(currentBranch) + cb, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
     ]);
 
     if (rRes && rRes.riders) {
@@ -719,12 +1029,18 @@ async function loadData() {
       document.getElementById('sumCompleted').innerHTML = `${s.completed??'-'}<span class="sum-unit">건</span>`;
       const rEl = document.getElementById('sumRejected');
       rEl.innerHTML = `${s.rejected??'-'}<span class="sum-unit">건</span>`;
-      rEl.className = `sum-value ${(s.rejected||0)>3?'danger':(s.rejected||0)>0?'warn':'ok'}`;
+      rEl.className = 'sum-value';
       document.getElementById('sumCancelled').innerHTML = `${s.cancelled??'-'}<span class="sum-unit">건</span>`;
 
-      // 전체 거절률 — peakState에서 채워짐 (peak-dashboard 직접 스크래핑 값)
+      // 전체 거절률 — peak-dashboard 페이지에서 긁어온 값 사용
+      // (rider-performance 페이지는 건수만, % 는 없음 → peak-dashboard 쪽 값이 실제 페이지에 뜨는 거절률)
+      const rrEl = document.getElementById('sumRejectRate');
+      const rr = (pRes && typeof pRes.rejectRate === 'number') ? pRes.rejectRate : null;
+      rrEl.innerHTML = rr !== null ? `${rr}<span class="sum-unit">%</span>` : `-<span class="sum-unit">%</span>`;
+      rrEl.className = 'sum-value ' + (rr === null ? '' : rr >= 10 ? 'danger' : 'ok');
 
-      document.getElementById('lastUpdate').textContent = rRes.ts ? timeAgo(rRes.ts) : '-';
+      document.getElementById('lastUpdate').textContent = rRes.ts ? timeAgo(rRes.ts) + ' 수신' : '-';
+      updateFreshBadge();
       renderRiders();
     }
 
@@ -733,32 +1049,33 @@ async function loadData() {
       const daily = pRes.dailyRate;
       const drEl = document.getElementById('sumDailyRate');
       drEl.innerHTML = `${daily??'-'}<span class="sum-unit">%</span>`;
-      drEl.className = `sum-value ${daily>=80?'ok':daily>=50?'warn':'danger'}`;
+      drEl.className = 'sum-value';
 
-      // 페이지에서 직접 긁어온 거절률 / 수락전·후 취소
-      const rrEl = document.getElementById('sumRejectRate');
-      const rr = pRes.rejectRate ?? null;
-      rrEl.innerHTML = rr !== null ? `${rr}<span class="sum-unit">%</span>` : `-<span class="sum-unit">%</span>`;
-      rrEl.className = `sum-value ${rr !== null ? rateClass(rr) : ''}`;
+      // 전체 거절률은 rRes.summary에서 이미 셋됨 (위쪽 블록 참조)
 
       const preEl = document.getElementById('sumPreCancel');
       preEl.innerHTML = `${pRes.preAcceptCancel ?? '-'}<span class="sum-unit">건</span>`;
-      preEl.className = `sum-value ${(pRes.preAcceptCancel||0) > 0 ? 'warn' : 'ok'}`;
+      preEl.className = 'sum-value';
 
       const postEl = document.getElementById('sumPostCancel');
       postEl.innerHTML = `${pRes.postAcceptCancel ?? '-'}<span class="sum-unit">건</span>`;
-      postEl.className = `sum-value ${(pRes.postAcceptCancel||0) > 0 ? 'warn' : 'ok'}`;
+      postEl.className = 'sum-value';
 
       renderTimeSlots();
     }
+    document.getElementById('dataAlert').classList.remove('show');
+    lastSuccessTs = Date.now();
+    hideErrorBanner();
   } catch(e) {
     console.error('[쿠팡 모바일] 로드 실패:', e);
+    document.getElementById('dataAlert').classList.add('show');
+    showErrorBanner();
   }
 }
 
 // ── 카운트다운 ───────────────────────────────────────
 function resetCountdown() {
-  countdownVal = 30;
+  countdownVal = 60;
   if (countdownTimer) clearInterval(countdownTimer);
   countdownTimer = setInterval(() => {
     countdownVal--;
@@ -795,10 +1112,37 @@ document.getElementById('modalOverlay').addEventListener('click', function(e) {
   if (e.target === this) this.classList.remove('open');
 });
 
-document.getElementById('btnCopy').addEventListener('click', () => {
+// 최신 라이더 데이터로 메시지 생성 (selectedRider stale 방지 + 매장 이동 대응)
+async function getLatestRiderData(name) {
+  const list = (riderState && Array.isArray(riderState.riders)) ? riderState.riders : null;
+  if (list) {
+    const found = list.find(r => r && r.name === name);
+    if (found && found.completed != null) return found;
+  }
+  // 모든 매장 통합 endpoint 검색 (라이더 매장 이동 시 대응)
+  try {
+    const res = await fetch('/api/coupang/all-riders');
+    if (res.ok) {
+      const data = await res.json();
+      const found = (data.riders || []).find(r => r && r.name === name);
+      if (found) return found;
+    }
+  } catch(e) { console.warn('all-riders fetch fail', e); }
+  return selectedRider;
+}
+
+function buildAlertMessage(r) {
+  const completed = r.completed != null ? r.completed : 0;
+  const rejected = r.rejected != null ? r.rejected : 0;
+  const cancelled = r.cancelled != null ? r.cancelled : 0;
+  const rejectRate = r.rejectRate != null ? fmt(r.rejectRate) : '0';
+  return `${r.name}님\n완료 ${completed}건 / 거절 ${rejected}건 / 취소 ${cancelled}건\n거절률 ${rejectRate}%\n거절률 관리 부탁드립니다.`;
+}
+
+document.getElementById('btnCopy').addEventListener('click', async () => {
   if (!selectedRider) return;
-  const r = selectedRider;
-  const text = `${r.name}님\n완료 ${r.completed}건 / 거절 ${r.rejected}건 / 취소 ${r.cancelled}건\n거절률 ${fmt(r.rejectRate)}%\n거절률 관리 부탁드립니다.`;
+  const r = await getLatestRiderData(selectedRider.name);
+  const text = buildAlertMessage(r);
   navigator.clipboard.writeText(text).then(() => {
     const btn = document.getElementById('btnCopy');
     btn.textContent = '✅ 복사됨!';
@@ -807,15 +1151,17 @@ document.getElementById('btnCopy').addEventListener('click', () => {
   }).catch(() => showToast('복사 실패'));
 });
 
-document.getElementById('btnSms').addEventListener('click', () => {
+document.getElementById('btnSms').addEventListener('click', async () => {
   if (!selectedRider) return;
-  const r = selectedRider;
+  const r = await getLatestRiderData(selectedRider.name);
   const phone = (r.phone || '').replace(/[^0-9]/g, '');
   if (!phone) { showToast('전화번호가 없습니다.'); return; }
-  const msg = `${r.name}님\n완료 ${r.completed}건 / 거절 ${r.rejected}건 / 취소 ${r.cancelled}건\n거절률 ${fmt(r.rejectRate)}%\n거절률 관리 부탁드립니다.`;
+  const msg = buildAlertMessage(r);
   navigator.clipboard.writeText(msg).catch(() => {});
-  window.location.href = 'sms:' + phone;
-  showToast('문자앱 열림 — 붙여넣기 하세요');
+  // 안드로이드 크롬이 가장 잘 받는 포맷: smsto:+82xxxxxxxxxx?body=...
+  const intl = phone.startsWith('0') ? '+82' + phone.slice(1) : phone;
+  window.location.href = 'smsto:' + intl + '?body=' + encodeURIComponent(msg);
+  showToast(r.name + '님 문자창 열림');
 });
 
 function showToast(msg) {
@@ -826,7 +1172,37 @@ function showToast(msg) {
 }
 
 // ── 시작 ─────────────────────────────────────────────
+// ── 다크모드 ──
+function toggleDark() {
+  document.body.classList.toggle('dark');
+  const on = document.body.classList.contains('dark');
+  localStorage.setItem('darkMode', on ? '1' : '0');
+  document.getElementById('darkToggle').textContent = on ? '☀️' : '🌙';
+}
+(function initDark() {
+  if (localStorage.getItem('darkMode') === '1') {
+    document.body.classList.add('dark');
+    document.getElementById('darkToggle').textContent = '☀️';
+  }
+})();
+
 loadData().then(resetCountdown);
+
+// 모바일 브라우저 BFCache 무력화 — 뒤로/앞으로 가서 페이지 복원될 때 강제 새로고침
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) location.reload();
+});
+// 페이지 다시 보일 때 즉시 데이터 갱신 (탭 전환 후 복귀 케이스)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') loadData();
+});
+// PWA/Service Worker 캐시 강제 해제 (옛 버전이 SW에 박혀 있을 때)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(rs => {
+    rs.forEach(r => r.unregister());
+  }).catch(() => {});
+}
+console.log('[쿠팡모바일 빌드] 2026-04-27-mobile-textwrap-v2');
 </script>
 </body>
 </html>
