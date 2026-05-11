@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>라이더 모니터링 (PC)</title>
+<title>배민 모니터링 (PC)</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
@@ -17,10 +17,27 @@
     display: flex; align-items: center; justify-content: space-between;
   }
   .header h1 { font-size: 20px; font-weight: 700; }
-  .header-meta { display: flex; align-items: center; gap: 10px; font-size: 13px; opacity: 0.9; margin-top: 2px; }
+  .header-meta { display: flex; align-items: center; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+  .last-update-big {
+    font-size: 17px; font-weight: 800;
+    background: rgba(255,255,255,0.2);
+    padding: 7px 14px; border-radius: 10px;
+    letter-spacing: -0.02em;
+  }
+  .fresh-badge {
+    font-size: 13px; font-weight: 800;
+    padding: 6px 12px; border-radius: 10px;
+    letter-spacing: 0.02em;
+  }
+  .fresh-badge.fresh { background: #10b981; color: #fff; }
+  .fresh-badge.ok    { background: #eab308; color: #fff; }
+  .fresh-badge.warn  { background: #f97316; color: #fff; }
+  .fresh-badge.stale { background: #ef4444; color: #fff; animation: pulseStale 1.2s infinite; }
+  @keyframes pulseStale { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
   .countdown-badge {
-    background: rgba(255,255,255,0.25); border-radius: 20px;
-    padding: 3px 10px; font-weight: 600; font-size: 13px;
+    background: rgba(255,255,255,0.25); border-radius: 10px;
+    padding: 7px 13px; font-weight: 700; font-size: 15px;
+    font-feature-settings: 'tnum';
   }
   .refresh-btn {
     background: rgba(255,255,255,0.25); border: none; border-radius: 20px;
@@ -62,8 +79,8 @@
   .sum-label { font-size: 12px; color: #888; font-weight: 500; margin-bottom: 6px; }
   .sum-value { font-size: 28px; font-weight: 700; }
   .sum-value.danger { color: #e53e3e; }
-  .sum-value.warn   { color: #dd6b20; }
-  .sum-value.ok     { color: #00c4ae; }
+  .sum-value.ok     { color: #48bb78; }
+  .sum-value.blue   { color: #3b82f6; }
 
   /* Peak summary */
   .peak-summary { padding-bottom: 6px; }
@@ -72,7 +89,15 @@
   .peak-card {
     background: #fff; border-radius: 12px; padding: 14px 10px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.08); text-align: center;
+    border-left: 3px solid #e5e7eb;
+    transition: box-shadow 0.3s;
   }
+  /* 진행중 시간대 — 녹색 펄스 깜빡임 */
+  @keyframes peakInProgPulseDesk {
+    0%, 100% { box-shadow: 0 0 0 1px rgba(34,197,94,0.30), 0 2px 12px rgba(34,197,94,0.20); }
+    50%       { box-shadow: 0 0 0 3px rgba(34,197,94,0.55), 0 5px 20px rgba(34,197,94,0.40); }
+  }
+  .peak-card.in-progress { animation: peakInProgPulseDesk 1.6s ease-in-out infinite; }
   .peak-label { font-size: 11px; color: #888; margin-bottom: 6px; line-height: 1.3; }
   .peak-val { font-size: 26px; font-weight: 800; color: #1a1a1a; }
 
@@ -89,33 +114,33 @@
     background: #fff; border-radius: 14px; padding: 16px 18px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     cursor: pointer; transition: transform 0.1s, box-shadow 0.1s;
-    border-left: 4px solid transparent;
+    border-left: 8px solid transparent;
   }
   .rider-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
   .rider-card.danger  { border-left-color: #e53e3e; }
-  .rider-card.warn    { border-left-color: #dd6b20; }
-  .rider-card.ok      { border-left-color: #48bb78; }
-  .rider-card.running { border-left-color: #3b82f6; }
+  .rider-card.running { border-left-color: #48bb78; }
+  .rider-card.offline { border-left-color: #9ca3af; }
 
   .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-  .rider-name { font-size: 16px; font-weight: 700; }
-  .rider-card.running .rider-name { color: #3b82f6; }
+  .rider-name { font-size: 20px; font-weight: 700; }
+  .rider-card.running .rider-name { color: #48bb78; }
+  .rider-card.offline .rider-name { color: #9ca3af; }
   .status-badge {
-    font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+    font-size: 13px; font-weight: 600; padding: 4px 11px; border-radius: 20px;
   }
   .status-badge.active   { background: #e6f9f7; color: #00a896; }
   .status-badge.inactive { background: #f2f2f2; color: #888; }
 
-  .card-stats { display: flex; gap: 16px; font-size: 13px; color: #555; }
+  .card-stats { display: flex; gap: 16px; font-size: 15px; color: #555; }
   .stat-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-  .stat-val { font-weight: 600; font-size: 15px; color: #1a1a1a; }
+  .stat-val { font-weight: 600; font-size: 18px; color: #1a1a1a; }
 
   .reject-row { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
-  .reject-label { font-size: 12px; color: #888; }
-  .reject-pct { font-size: 20px; font-weight: 800; }
-  .reject-pct.danger { color: #e53e3e; }
-  .reject-pct.warn   { color: #dd6b20; }
-  .reject-pct.ok     { color: #48bb78; }
+  .reject-label { font-size: 14px; color: #888; }
+  .reject-pct { font-size: 24px; font-weight: 800; }
+  .reject-pct.danger  { color: #e53e3e; }
+  .reject-pct.running { color: #48bb78; }
+  .reject-pct.offline { color: #9ca3af; }
 
   /* Empty / Loading */
   .empty {
@@ -163,7 +188,6 @@
   .modal-reject-label { font-size: 13px; color: #888; font-weight: 500; }
   .modal-reject-val   { font-size: 28px; font-weight: 800; }
   .modal-reject-val.danger { color: #e53e3e; }
-  .modal-reject-val.warn   { color: #dd6b20; }
   .modal-reject-val.ok     { color: #48bb78; }
 
   .btn-row { display: flex; gap: 10px; }
@@ -189,20 +213,81 @@
     pointer-events: none; white-space: nowrap;
   }
   .toast.show { opacity: 1; }
+
+  /* ── 다크모드 ── */
+  body.dark { background: #111827; color: #f1f5f9; }
+  body.dark .sum-card,
+  body.dark .peak-card,
+  body.dark .rider-card,
+  body.dark .modal { background: #1e293b; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+  body.dark .tab-btn { background: #1e293b; border-color: #475569; color: #94a3b8; }
+  body.dark .tab-btn.active { background: #00c4ae; color: #fff; border-color: #00c4ae; }
+  body.dark .search-input { background: #1e293b; border-color: #475569; color: #f1f5f9; }
+  body.dark .sum-label,
+  body.dark .peak-label { color: #94a3b8; }
+  body.dark .peak-val { color: #f1f5f9; }
+  body.dark .peak-title { color: #94a3b8; }
+  body.dark .rider-name { color: #f1f5f9; }
+  body.dark .rider-card.running .rider-name { color: #4ade80; }
+  body.dark .rider-card.offline .rider-name { color: #9ca3af; }
+  body.dark .reject-pct.danger { color: #f87171; }
+  body.dark .card-stats { color: #94a3b8; }
+  body.dark .stat-val { color: #e2e8f0; }
+  body.dark .reject-label { color: #94a3b8; }
+  body.dark .status-badge.active   { background: #0d3d38; color: #34d399; }
+  body.dark .status-badge.inactive { background: #1f2937; color: #9ca3af; }
+  body.dark .modal-overlay { background: rgba(0,0,0,0.7); }
+  body.dark .modal-close { color: #64748b; }
+  body.dark .modal-close:hover { color: #e2e8f0; }
+  body.dark .modal-status { color: #94a3b8; }
+  body.dark .modal-stat { background: #0f172a; }
+  body.dark .modal-stat-label { color: #94a3b8; }
+  body.dark .modal-reject-row { background: #2d1f1f; }
+  body.dark .modal-reject-label { color: #94a3b8; }
+  body.dark .btn-copy { background: #1e293b; color: #f1f5f9; }
+  body.dark .btn-copy:hover { background: #334155; }
+  body.dark .empty { color: #64748b; }
+
+  /* 데이터 수집 실패 경고 */
+  .data-alert { display:none; background:#dc2626; color:#fff; padding:10px 16px; font-size:14px; font-weight:700; text-align:center; animation:alertFlash 1s infinite; }
+  .data-alert.show { display:block; }
+  @keyframes alertFlash { 0%,100%{opacity:1} 50%{opacity:.7} }
+
+  #error-banner {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    background: #e53e3e;
+    color: white;
+    text-align: center;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 700;
+    z-index: 9999;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  #error-banner.show { display: block; }
 </style>
 </head>
 <body>
+<div id="error-banner">⚠️ 데이터 수집 실패 - 서버 연결을 확인하세요</div>
 
 <div class="header">
   <div>
-    <h1>🛵 라이더 모니터링</h1>
+    <h1>🛵 배민 모니터링</h1>
     <div class="header-meta">
-      <span id="last-update">마지막 업데이트: -</span>
+      <span class="last-update-big" id="last-update">⏱ 갱신 중...</span>
+      <span class="fresh-badge" id="freshBadge" style="display:none"></span>
       <span class="countdown-badge" id="countdown">30s</span>
     </div>
   </div>
-  <button class="refresh-btn" onclick="manualRefresh()">↻ 새로고침</button>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="refresh-btn" onclick="manualRefresh()">↻ 새로고침</button>
+    <button class="refresh-btn" id="darkToggle" onclick="toggleDark()" style="font-size:16px">🌙</button>
+  </div>
 </div>
+
+<div class="data-alert" id="dataAlert">⚠️ 데이터 수집 실패 - 서버 연결을 확인하세요</div>
 
 <div class="container">
 
@@ -217,10 +302,10 @@
   </div>
 
   <div class="summary">
-    <div class="sum-card"><div class="sum-label">전체 라이더</div><div class="sum-value ok"     id="s-total">-</div></div>
+    <div class="sum-card"><div class="sum-label">전체 라이더</div><div class="sum-value"        id="s-total">-</div></div>
     <div class="sum-card"><div class="sum-label">운행중</div>      <div class="sum-value ok"     id="s-active">-</div></div>
     <div class="sum-card"><div class="sum-label">위험 (거절률 20%+)</div><div class="sum-value danger" id="s-danger">-</div></div>
-    <div class="sum-card"><div class="sum-label">전체 완료건수</div><div class="sum-value ok"    id="s-completed">-</div></div>
+    <div class="sum-card"><div class="sum-label">전체 완료건수</div><div class="sum-value blue"  id="s-completed">-</div></div>
     <div class="sum-card"><div class="sum-label">평균 거절률</div> <div class="sum-value"        id="s-avg">-</div></div>
   </div>
 
@@ -312,10 +397,28 @@
 
 <script>
   var API = '/api/riders';
+  function apiUrl() { return API; }
   var INTERVAL = 30;
 
   var allRiders = [];
   var riderDataTs = null;
+  var lastSuccessTs = Date.now();
+  setInterval(function() { if (Date.now() - lastSuccessTs > 120000) document.getElementById('dataAlert').classList.add('show'); }, 30000);
+
+  var lastSuccessTime = Date.now();
+  function showErrorBanner() {
+    document.getElementById('error-banner').classList.add('show');
+  }
+  function hideErrorBanner() {
+    document.getElementById('error-banner').classList.remove('show');
+    lastSuccessTime = Date.now();
+  }
+  // Check every 30 seconds if last success was >2 minutes ago
+  setInterval(function() {
+    if (Date.now() - lastSuccessTime > 2 * 60 * 1000) {
+      showErrorBanner();
+    }
+  }, 30000);
   var selectedRider = null;
   var countdownVal = INTERVAL;
   var countdownTimer = null;
@@ -381,7 +484,7 @@
   }
 
   function fetchRiders() {
-    fetch(API)
+    fetch(apiUrl())
       .then(function(res) {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
@@ -395,20 +498,43 @@
         updateLastUpdate();
         render();
         resetCountdown();
+        document.getElementById('dataAlert').classList.remove('show');
+        lastSuccessTs = Date.now();
+        hideErrorBanner();
       })
       .catch(function(e) {
         showToast('데이터 로드 실패: ' + e.message);
         resetCountdown();
+        document.getElementById('dataAlert').classList.add('show');
+        showErrorBanner();
       });
   }
 
-  function updateLastUpdate() {
-    var now = new Date();
-    var h = String(now.getHours()).padStart(2, '0');
-    var m = String(now.getMinutes()).padStart(2, '0');
-    var s = String(now.getSeconds()).padStart(2, '0');
-    document.getElementById('last-update').textContent = '마지막 업데이트: ' + h + ':' + m + ':' + s;
+  // Big freshness display: timeAgo + freshBadge (uses riderDataTs from server push)
+  function timeAgo(ts) {
+    if (!ts) return '-';
+    var sec = Math.floor((Date.now() - ts) / 1000);
+    if (sec < 5) return '방금';
+    if (sec < 60) return sec + '초 전';
+    if (sec < 3600) return Math.floor(sec/60) + '분 ' + (sec%60) + '초 전';
+    return Math.floor(sec/3600) + '시간 전';
   }
+  function updateLastUpdate() {
+    var ts = riderDataTs || null;
+    var lu = document.getElementById('last-update');
+    var fb = document.getElementById('freshBadge');
+    if (!lu) return;
+    if (!ts) { lu.textContent = '⏱ 갱신 중...'; if(fb) fb.style.display = 'none'; return; }
+    var sec = Math.floor((Date.now() - ts) / 1000);
+    lu.textContent = '⏱ ' + timeAgo(ts);
+    if (!fb) return;
+    var cls = sec < 60 ? 'fresh' : sec < 180 ? 'ok' : sec < 600 ? 'warn' : 'stale';
+    var lbl = sec < 60 ? '🟢 LIVE' : sec < 180 ? '🟡 정상' : sec < 600 ? '🟠 지연' : '🔴 끊김';
+    fb.className = 'fresh-badge ' + cls;
+    fb.textContent = lbl;
+    fb.style.display = '';
+  }
+  setInterval(updateLastUpdate, 1000);
 
   function resetCountdown() {
     countdownVal = INTERVAL;
@@ -425,9 +551,7 @@
   }
 
   function rateClass(rate) {
-    if (rate >= 20) return 'danger';
-    if (rate >= 10) return 'warn';
-    return 'ok';
+    return rate >= 20 ? 'danger' : 'ok';
   }
 
   function esc(str) {
@@ -461,6 +585,8 @@
     document.getElementById('s-total').textContent     = total;
     document.getElementById('s-active').textContent    = active;
     document.getElementById('s-danger').textContent    = danger;
+    // 위험 카드: 0명=ok(녹색), 1명 이상=danger(빨강)
+    document.getElementById('s-danger').className = 'sum-value ' + (danger === 0 ? 'ok' : 'danger');
     document.getElementById('s-completed').textContent = totalCompleted;
 
     // 피크타임 합계
@@ -476,10 +602,45 @@
     document.getElementById('p-evening').textContent   = sumE;
     document.getElementById('p-midnight').textContent  = sumN;
 
+    // 시간대별 배달 카드 — 현재 시각 기반 상태 색상 (진행중=녹색, 완료=주황, 대기/0건=기본)
+    //   아침점심피크 6~14 / 오후논피크 14~17 / 저녁피크 17~20 / 심야논피크 20~6
+    var _h = new Date().getHours();
+    // 평일 아침점심피크 6~13 / 주말·휴일 아침점심피크 6~14 (점심 논피크 14시 시작)
+    var _HOLIDAYS = ['2026-01-01','2026-02-16','2026-02-17','2026-02-18','2026-03-01','2026-04-29','2026-05-01','2026-05-05','2026-05-24','2026-06-06','2026-08-15','2026-09-24','2026-09-25','2026-09-26','2026-10-03','2026-10-09','2026-12-25'];
+    var _todayKST = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).slice(0,10);
+    var _isHoliday = _HOLIDAYS.indexOf(_todayKST) >= 0;
+    var _now = new Date();
+    var _isWeekend = _now.getDay() === 0 || _now.getDay() === 6;
+    var _mEnd = (_isWeekend || _isHoliday) ? 14 : 13;
+    function _peakState(key) {
+      var inR = false, passed = false;
+      if (key === 'morning')        { inR = _h >= 6     && _h < _mEnd; passed = _h >= _mEnd && _h < 24; }
+      else if (key === 'afternoon') { inR = _h >= _mEnd && _h < 17;    passed = _h >= 17    && _h < 24; }
+      else if (key === 'evening')   { inR = _h >= 17    && _h < 20;    passed = _h >= 20    && _h < 24; }
+      else if (key === 'midnight')  { inR = _h >= 20    || _h < 6;     passed = _h >= 6     && _h < 20; }
+      return { inR: inR, passed: passed };
+    }
+    [['p-morning','morning',sumM],['p-afternoon','afternoon',sumA],['p-evening','evening',sumE],['p-midnight','midnight',sumN]].forEach(function(row) {
+      var el = document.getElementById(row[0]); if (!el) return;
+      var card = el.parentElement;
+      var st = _peakState(row[1]);
+      var color = st.inR ? '#22c55e' : (st.passed && row[2] > 0) ? '#f59e0b' : '';
+      if (color) {
+        el.style.setProperty('color', color, 'important');
+        if (card) card.style.setProperty('border-left-color', color, 'important');
+      } else {
+        el.style.removeProperty('color');
+        if (card) card.style.removeProperty('border-left-color');
+      }
+      // 진행중 시간대만 녹색 펄스 깜빡임
+      if (card) card.classList.toggle('in-progress', !!st.inR);
+    });
+
     var avgEl = document.getElementById('s-avg');
     if (avgNum !== null) {
       avgEl.textContent = avgNum.toFixed(1) + '%';
-      avgEl.className   = 'sum-value ' + rateClass(avgNum);
+      // 20% 이상=danger(빨강), 미만=ok(녹색) — 양방향
+      avgEl.className   = 'sum-value ' + (avgNum >= 20 ? 'danger' : 'ok');
     } else {
       avgEl.textContent = '-';
       avgEl.className   = 'sum-value';
@@ -498,10 +659,12 @@
     emptyMsg.style.display = 'none';
 
     riders.forEach(function(r) {
-      var cls      = rateClass(r.rejectRate);
-      var isActive = r.status === '운행중';
-      var card     = document.createElement('div');
-      card.className = 'rider-card ' + (isActive ? 'running' : cls);
+      var isActive  = r.status === '운행중';
+      var isDanger  = r.rejectRate >= 20;
+      var borderCls = isActive ? 'running' : 'offline';
+      var pctCls    = isDanger ? 'danger' : borderCls;
+      var card      = document.createElement('div');
+      card.className = 'rider-card ' + borderCls;
       card.innerHTML =
         '<div class="card-top">' +
           '<span class="rider-name">' + esc(r.name) + '</span>' +
@@ -516,7 +679,7 @@
         '</div>' +
         '<div class="reject-row">' +
           '<span class="reject-label">거절률</span>' +
-          '<span class="reject-pct ' + cls + '">' + r.rejectRate + '%</span>' +
+          '<span class="reject-pct ' + pctCls + '">' + r.rejectRate + '%</span>' +
         '</div>';
       card.addEventListener('click', function() { openModal(r); });
       list.appendChild(card);
@@ -586,8 +749,10 @@
       return;
     }
     navigator.clipboard.writeText(msg).catch(function(){});
-    window.location.href = 'sms:' + phone;
-    showToast('문자앱 열림 — 붙여넣기하세요');
+    // 안드로이드 크롬: smsto:+82xxxxxxxxxx?body=... 포맷이 가장 안정적
+    var intl = phone.charAt(0) === '0' ? '+82' + phone.slice(1) : phone;
+    window.location.href = 'smsto:' + intl + '?body=' + encodeURIComponent(msg);
+    showToast(r.name + '님 문자창 열림');
   });
 
   function showToast(msg) {
@@ -614,7 +779,7 @@
     var attempts = 0;
     _pollTimer = setInterval(function() {
       attempts++;
-      fetch(API)
+      fetch(apiUrl())
         .then(function(r) { return r.json(); })
         .then(function(json) {
           if (json.ts && json.ts !== riderDataTs) {
@@ -633,6 +798,20 @@
   }
 
   document.getElementById('search').addEventListener('input', render);
+
+  // ── 다크모드 ──
+  function toggleDark() {
+    document.body.classList.toggle('dark');
+    var on = document.body.classList.contains('dark');
+    localStorage.setItem('darkMode', on ? '1' : '0');
+    document.getElementById('darkToggle').textContent = on ? '☀️' : '🌙';
+  }
+  (function initDark() {
+    if (localStorage.getItem('darkMode') === '1') {
+      document.body.classList.add('dark');
+      document.getElementById('darkToggle').textContent = '☀️';
+    }
+  })();
 
   requestNotifPermission();
   fetchRiders();

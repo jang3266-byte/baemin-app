@@ -86,7 +86,10 @@ app.post('/api/coupang/riders', (req, res) => {
   console.log(`[쿠팡 라이더] 활성 ${d.riders.length}명 / 전체(오늘) ${mergedRiders.length}명`);
   res.json({ ok: true, count: mergedRiders.length });
 });
-app.get('/api/coupang/riders', (req, res) => res.json(coupangRiders));
+app.get('/api/coupang/riders', (req, res) => {
+  const result = { ...coupangRiders, riders: (coupangRiders.riders || []).map(r => ({ ...r, rejectRate: calcRejectRate(r) })) };
+  res.json(result);
+});
 
 app.post('/api/coupang/peak', (req, res) => {
   const d = req.body;
