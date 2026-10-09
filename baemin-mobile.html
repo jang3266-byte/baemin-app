@@ -372,23 +372,48 @@
     document.getElementById('danger-banner').classList.remove('show');
   }
 
+  // 알림 기록: 라이더당 하루 1번만 (새로고침해도 유지)
+  function todayKey() {
+    var d = new Date();
+    return 'dangerAlerted_' + d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+  }
+  function loadAlerted() {
+    try {
+      var raw = localStorage.getItem(todayKey());
+      return raw ? new Set(JSON.parse(raw)) : null;
+    } catch(e) { return null; }
+  }
+  function saveAlerted() {
+    try {
+      var k = todayKey();
+      Object.keys(localStorage).forEach(function(key) {
+        if (key.indexOf('dangerAlerted_') === 0 && key !== k) localStorage.removeItem(key);
+      });
+      localStorage.setItem(k, JSON.stringify(Array.from(knownDangerSet)));
+    } catch(e) {}
+  }
+  var knownDangerDay = null;
+
   function checkAndNotify(riders) {
     var dangerous = riders.filter(function(r) { return r.rejectRate >= 20; });
-    if (knownDangerSet === null) {
-      // 첫 로드: 기록만, 알림 없음
-      knownDangerSet = new Set(dangerous.map(function(r) { return r.name; }));
-      return;
+    if (knownDangerSet === null || knownDangerDay !== todayKey()) {
+      knownDangerDay = todayKey();
+      knownDangerSet = loadAlerted();
+      if (knownDangerSet === null) {
+        // 첫 로드: 기록만, 알림 없음
+        knownDangerSet = new Set(dangerous.map(function(r) { return r.name; }));
+        saveAlerted();
+        return;
+      }
     }
     var newDanger = dangerous.filter(function(r) { return !knownDangerSet.has(r.name); });
     if (newDanger.length > 0) {
       playAlert();
-      vibrateAlert();
       newDanger.forEach(function(r) { knownDangerSet.add(r.name); });
+      saveAlerted();
+      vibrateAlert();
       showDangerBanner(newDanger);
     }
-    // 거절률 회복 시 Set 제거 → 다시 넘으면 또 알림
-    riders.filter(function(r) { return r.rejectRate < 20; })
-          .forEach(function(r) { knownDangerSet.delete(r.name); });
   }
 
   function setTab(tab) {
